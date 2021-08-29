@@ -45,8 +45,7 @@ export async function createPanel(): Promise<WebviewPanel> {
       routeName: 'markdown-preview-enhanced',
     },
     {
-      enableFindWidget: true,
-      localResourceRoots,
+      localResourceRoots: [...],
       enableScripts: true,
     }
   );
