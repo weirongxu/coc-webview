@@ -4,10 +4,14 @@
   "description": "Vscode webview ported to coc.nvim",
   "author": "Weirong Xu <weirongxu.raidou@gmail.com>",
   "license": "MIT",
+  "repository": "git@github.com:weirongxu/coc-webview.git",
+  "homepage": "https://github.com/weirongxu/coc-webview",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "keywords": [
-    "coc.nvim"
+    "coc.nvim",
+    "webview",
+    "webview-panel"
   ],
   "engines": {
     "coc": "^0.0.80"
