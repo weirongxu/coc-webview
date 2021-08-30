@@ -1,10 +1,9 @@
 import { Emitter, Event, Uri, window } from 'coc.nvim';
+import { Webview, WebviewOptions, WebviewPanel, WebviewPanelOnDidChangeViewStateEvent } from './api.types';
+import { webviewManager } from './manager';
 import { asWebviewUri } from './resource';
 import { cocWebviewServer, ServerConnector } from './server';
-import { Webview, WebviewOptions, WebviewPanel, WebviewPanelOnDidChangeViewStateEvent } from './api.types';
 import { logger } from './util';
-import { WebviewList } from './list';
-import { webviewManager } from './manager';
 
 type WebviewPanelOpenOptions = {
   openURL: boolean;

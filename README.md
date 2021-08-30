@@ -35,13 +35,14 @@ const getWebviewAPI = () => {
 // create webview panel
 export async function createPanel(): Promise<WebviewPanel> {
   return getWebviewAPI().createWebviewPanel(
-    // webview title
+    // viewType
     'markdown-preview-enhanced',
+    // title
     `Preview ${path.basename(sourceUri.fsPath)}`,
     {
-      // open webview in browser
+      // open in browser
       openURL: true,
-      // webview route name
+      // route name
       routeName: 'markdown-preview-enhanced',
     },
     {
