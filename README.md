@@ -1,6 +1,6 @@
 # coc-webview
 
-Webview ported to coc.nvim
+Webview panel ported to coc.nvim
 
 ## Install
 

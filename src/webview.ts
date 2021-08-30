@@ -116,9 +116,11 @@ class CocWebviewPanel implements WebviewPanel {
       this.active = true;
       this.visible = true;
     });
-    this.connector.unregisterEmitter.event(() => {
-      this.active = false;
-      this.visible = false;
+    this.connector.unregisterEmitter.event(({ socketsCount }) => {
+      if (socketsCount <= 0) {
+        this.active = false;
+        this.visible = false;
+      }
     });
 
     this.webview = new CocWebview(this.connector, host, port, options ?? {});
@@ -136,7 +138,9 @@ class CocWebviewPanel implements WebviewPanel {
     await this.connector.reveal(options);
   }
 
-  dispose() {}
+  dispose() {
+    void this.connector.dispose();
+  }
 }
 
 export async function createWebviewPanel(

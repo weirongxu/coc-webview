@@ -3,12 +3,20 @@ import { SocketClientEvents, SocketServerEvents, StartupOptions } from '../types
 
 // @ts-ignore
 window.startup = (options: StartupOptions) => {
+  const { routeName } = options;
   const socket: Socket<SocketClientEvents, SocketServerEvents> = io(options.url, { autoConnect: true });
   const iframe = document.getElementById('main') as HTMLIFrameElement;
 
   const win = iframe.contentWindow;
-  console.log('register', options.routeName);
-  socket.emit('register', options.routeName);
+
+  function log(...args: any[]) {
+    console.log(`[${routeName}][socket ${socket.id}]`, ...args);
+  }
+
+  socket.on('connect', () => {
+    log(`register`);
+    socket.emit('register', routeName);
+  });
 
   if (win) {
     let storedState = options.initState;
@@ -22,12 +30,12 @@ window.startup = (options: StartupOptions) => {
           return storedState;
         },
         setState(state: any) {
-          console.log('setState', state);
+          log('setState', state);
           storedState = state;
           socket.emit('setState', state);
         },
         postMessage(message: any) {
-          console.log('postMessage', message);
+          log('postMessage', message);
           socket.emit('postMessage', message);
         },
       };
@@ -40,23 +48,28 @@ window.startup = (options: StartupOptions) => {
     };
 
     document.querySelector('#title .close')?.addEventListener('click', () => {
-      console.log('close');
+      log(`close`);
       setHtml('CLOSED');
       socket.emit('dispose');
     });
 
     socket.on('postMessage', (message) => {
-      console.log('received postMessage', message);
+      log('received postMessage', message);
       win.postMessage(message, '*');
     });
 
     socket.on('html', (content) => {
-      console.log('received html', content);
+      log('received html', content);
       setHtml(content);
     });
 
     socket.on('reveal', () => {
       // TODO flash
+    });
+
+    socket.on('dispose', () => {
+      window.close();
+      win.close();
     });
 
     // TODO vim keybinding

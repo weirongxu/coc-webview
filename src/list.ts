@@ -17,6 +17,14 @@ export class WebviewList extends BasicList {
         await cocWebviewServer.openRoute(route);
       })
     );
+
+    this.addAction(
+      'dispose',
+      logger.asyncCatch(async (item) => {
+        const route: ServerRoute = item.data.route;
+        await cocWebviewServer.openRoute(route);
+      })
+    );
   }
 
   async loadItems(): Promise<ListItem[] | ListTask | null | undefined> {

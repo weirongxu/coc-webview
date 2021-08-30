@@ -1,4 +1,4 @@
-import { Emitter } from 'coc.nvim';
+import { Emitter, window } from 'coc.nvim';
 import http from 'http';
 import path from 'path';
 import { Server as SocketServer, Socket } from 'socket.io';
@@ -22,7 +22,39 @@ export type ServerRoute = ServerRouteParams & {
 
 type ServerSocket = Socket<SocketServerEvents, SocketClientEvents>;
 
-export class CocWebviewServer {
+class SocketManager {
+  public readonly sockets = new Map<string, Map<string, ServerSocket>>();
+
+  register(routeName: string, socket: Socket) {
+    let sockets = this.sockets.get(routeName);
+    if (!sockets) {
+      sockets = new Map();
+      this.sockets.set(routeName, sockets);
+    }
+    sockets.set(socket.id, socket);
+    return sockets.size;
+  }
+
+  unregisterAll(routeName: string) {
+    this.sockets.delete(routeName);
+    return 0;
+  }
+
+  unregister(routeName: string, socket: Socket) {
+    const sockets = this.sockets.get(routeName);
+    if (sockets) {
+      sockets.delete(socket.id);
+      return sockets.size;
+    }
+    return 0;
+  }
+
+  get(routeName: string) {
+    return this.sockets.get(routeName);
+  }
+}
+
+class CocWebviewServer {
   private static staticRoutes: Record<string, string> = {
     'client.js': path.join(__dirname, 'client.js'),
     'client.css': path.resolve(__dirname, '../client.css'),
@@ -31,16 +63,18 @@ export class CocWebviewServer {
   private instance?: http.Server;
   private wsInstance?: SocketServer;
   public readonly routes = new Map<string, ServerRoute>();
-  public readonly sockets = new Map<string, ServerSocket>();
+  public readonly sockets = new SocketManager();
   public readonly states = new Map<string, unknown>();
-  public readonly registerEmitter = new Emitter<{ routeName: string }>();
-  public readonly unregisterEmitter = new Emitter<{ routeName: string }>();
+  public readonly registerEmitter = new Emitter<{ routeName: string; socketsCount: number }>();
+  public readonly unregisterEmitter = new Emitter<{ routeName: string; socketsCount: number }>();
   public readonly disposeEmitter = new Emitter<{ routeName: string }>();
   public readonly postMessagEmitter = new Emitter<{
+    socket: Socket;
     routeName: string;
     message: any;
   }>();
   public readonly setStateEmitter = new Emitter<{
+    socket: Socket;
     routeName: string;
     state: any;
   }>();
@@ -98,26 +132,31 @@ export class CocWebviewServer {
       this.wsInstance = new SocketServer(this.instance);
       this.wsInstance.on('connection', (socket) => {
         socket.on('register', (routeName: string) => {
-          this.sockets.set(routeName, socket);
-          this.registerEmitter.fire({ routeName });
+          const socketsCount = this.sockets.register(routeName, socket);
+          this.registerEmitter.fire({ routeName, socketsCount });
+          window.showMessage(`[${routeName}][socket ${socket.id}] connect count(${socketsCount})`);
 
           socket.on('disconnect', () => {
-            this.sockets.delete(routeName);
-            this.unregisterEmitter.fire({ routeName });
+            window.showMessage(`[${routeName}][socket ${socket.id}] disconnect count(${socketsCount})`);
+            this.sockets.unregister(routeName, socket);
+            this.unregisterEmitter.fire({ routeName, socketsCount });
           });
 
           socket.on('dispose', () => {
             socket.disconnect();
+            this.sockets.unregisterAll(routeName);
             this.routes.delete(routeName);
             this.disposeEmitter.fire({ routeName });
           });
 
-          socket.on('postMessage', (message: any) => {
-            this.postMessagEmitter.fire({ routeName, message });
+          socket.on('postMessage', (message) => {
+            logger.debug(`[${routeName}][socket ${socket.id}] client postMessage ${JSON.stringify(message)}`);
+            this.postMessagEmitter.fire({ socket, routeName, message });
           });
 
-          socket.on('setState', (state: any) => {
-            this.setStateEmitter.fire({ routeName, state });
+          socket.on('setState', (state) => {
+            logger.debug(`[${routeName}][socket ${socket.id}] client setState ${JSON.stringify(state)}`);
+            this.setStateEmitter.fire({ socket, routeName, state });
             this.states.set(routeName, state);
           });
         });
@@ -246,22 +285,22 @@ export class CocWebviewServer {
 }
 
 export class ServerConnector {
-  public readonly registerEmitter = new Emitter<void>();
-  public readonly unregisterEmitter = new Emitter<void>();
+  public readonly registerEmitter = new Emitter<{ socketsCount: number }>();
+  public readonly unregisterEmitter = new Emitter<{ socketsCount: number }>();
   public readonly disposeEmitter = new Emitter<void>();
   public readonly postMessageEmitter = new Emitter<any>();
   public readonly setStateEmitter = new Emitter<any>();
 
   constructor(private server: CocWebviewServer, private routeName: string) {
-    this.server.registerEmitter.event(({ routeName }) => {
+    this.server.registerEmitter.event(({ routeName, socketsCount }) => {
       if (routeName === this.routeName) {
-        this.registerEmitter.fire();
+        this.registerEmitter.fire({ socketsCount });
       }
     });
 
-    this.server.unregisterEmitter.event(({ routeName }) => {
+    this.server.unregisterEmitter.event(({ routeName, socketsCount }) => {
       if (routeName === this.routeName) {
-        this.unregisterEmitter.fire();
+        this.unregisterEmitter.fire({ socketsCount });
       }
     });
 
@@ -284,15 +323,24 @@ export class ServerConnector {
     });
   }
 
-  async waitSocket<T>(run: (socket: ServerSocket) => T): Promise<T> {
-    const socket = this.server.sockets.get(this.routeName);
-    if (socket) {
-      return run(socket);
+  async waitSocket<T>(run: (socket: ServerSocket) => T): Promise<T[]> {
+    const sockets = this.server.sockets.get(this.routeName);
+    function runSockets(sockets: Map<string, ServerSocket>) {
+      const results: T[] = [];
+      for (const [, socket] of sockets) {
+        results.push(run(socket));
+      }
+      return results;
+    }
+    if (sockets) {
+      return runSockets(sockets);
     } else {
-      return new Promise((resolve) => {
+      return new Promise<T[]>((resolve) => {
         this.registerEmitter.event(() => {
-          const socket = this.server.sockets.get(this.routeName);
-          resolve(run(socket!));
+          const sockets = this.server.sockets.get(this.routeName);
+          if (sockets) {
+            resolve(runSockets(sockets));
+          }
         });
       });
     }
@@ -300,19 +348,35 @@ export class ServerConnector {
 
   async setHtml(content: string) {
     await this.waitSocket((socket) => {
+      logger.debug(`[${this.routeName}][socket ${socket.id}] server setHtml`);
       socket.emit('html', content);
     });
   }
 
   async postMessage(message: any): Promise<boolean> {
-    return this.waitSocket((socket) => socket.emit('postMessage', message));
+    const results = await this.waitSocket((socket) => {
+      logger.debug(`[${this.routeName}][socket ${socket.id}] server postMessage ${JSON.stringify(message)}`);
+      return socket.emit('postMessage', message);
+    });
+    return results.every((r) => r);
   }
 
   async reveal(options: { openURL: boolean }): Promise<boolean> {
     if (options.openURL) {
       await this.server.openByRouteName(this.routeName);
     }
-    return this.waitSocket((socket) => socket.emit('reveal'));
+    const results = await this.waitSocket((socket) => {
+      logger.debug(`[${this.routeName}][socket ${socket.id}] server reveal`);
+      return socket.emit('reveal');
+    });
+    return results.every((r) => r);
+  }
+
+  async dispose() {
+    await this.waitSocket((socket) => {
+      logger.debug(`[${this.routeName}][socket ${socket.id}] server dispose`);
+      return socket.emit('dispose');
+    });
   }
 }
 

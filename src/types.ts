@@ -6,9 +6,10 @@ export type SocketServerEvents = {
 };
 
 export type SocketClientEvents = {
-  reveal: () => void;
   html: (content: string) => void;
   postMessage: (message: any) => void;
+  reveal: () => void;
+  dispose: () => void;
 };
 
 export type StartupOptions = {
