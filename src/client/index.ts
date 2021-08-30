@@ -47,10 +47,16 @@ window.startup = (options: StartupOptions) => {
       win.document.close();
     };
 
-    document.querySelector('#title .close')?.addEventListener('click', () => {
+    const close = () => {
       log(`close`);
       setHtml('CLOSED');
+      win.close();
+      window.close();
+    };
+
+    document.querySelector('#title .close')?.addEventListener('click', () => {
       socket.emit('dispose');
+      close();
     });
 
     socket.on('postMessage', (message) => {
@@ -68,8 +74,7 @@ window.startup = (options: StartupOptions) => {
     });
 
     socket.on('dispose', () => {
-      window.close();
-      win.close();
+      close();
     });
 
     // TODO vim keybinding

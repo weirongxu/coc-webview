@@ -52,6 +52,13 @@ export async function createPanel(): Promise<WebviewPanel> {
 }
 ```
 
+## TODO
+
+- [ ] reveal highlight
+- [ ] display iconPath
+- [ ] vim keybinding
+- [ ] cspSource
+
 ## License
 
 MIT

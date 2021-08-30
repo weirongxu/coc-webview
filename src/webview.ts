@@ -3,6 +3,7 @@ import { asWebviewUri } from './resource';
 import { cocWebviewServer, ServerConnector } from './server';
 import { Webview, WebviewOptions, WebviewPanel, WebviewPanelOnDidChangeViewStateEvent } from './api.types';
 import { logger } from './util';
+import { WebviewList } from './list';
 
 type WebviewPanelOpenOptions = {
   openURL: boolean;
@@ -98,7 +99,20 @@ class CocWebviewPanel implements WebviewPanel {
       await cocWebviewServer.openRoute(route);
     }
     window.showMessage(`Launched webview panel ${routeName}`);
-    return new CocWebviewPanel(connector, route.host, route.port, viewType, title, routeName, options);
+    const panel = new CocWebviewPanel(connector, route.host, route.port, viewType, title, routeName, options);
+
+    // add to list
+    const listItem = {
+      panel,
+      route,
+      connector,
+    };
+    WebviewList.items.add(listItem);
+    panel.onDidDispose(() => {
+      WebviewList.items.delete(listItem);
+    });
+
+    return panel;
   }
 
   private constructor(

@@ -143,10 +143,17 @@ class CocWebviewServer {
           });
 
           socket.on('dispose', () => {
-            socket.disconnect();
-            this.sockets.unregisterAll(routeName);
-            this.routes.delete(routeName);
-            this.disposeEmitter.fire({ routeName });
+            const sockets = this.sockets.get(routeName);
+            if (sockets) {
+              for (const [, s] of sockets) {
+                if (s === socket) {
+                  continue;
+                }
+                s.emit('dispose');
+              }
+            }
+
+            this.removeAndDispose(routeName);
           });
 
           socket.on('postMessage', (message) => {
@@ -280,7 +287,13 @@ class CocWebviewServer {
     if (!route) {
       return;
     }
-    await open(this.genUrl(route));
+    await this.openRoute(route);
+  }
+
+  public removeAndDispose(routeName: string) {
+    this.sockets.unregisterAll(routeName);
+    this.routes.delete(routeName);
+    this.disposeEmitter.fire({ routeName });
   }
 }
 
@@ -372,11 +385,14 @@ export class ServerConnector {
     return results.every((r) => r);
   }
 
+  async disposeSockets() {}
+
   async dispose() {
     await this.waitSocket((socket) => {
       logger.debug(`[${this.routeName}][socket ${socket.id}] server dispose`);
       return socket.emit('dispose');
     });
+    cocWebviewServer.removeAndDispose(this.routeName);
   }
 }
 
