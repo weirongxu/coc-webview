@@ -15,21 +15,27 @@ body {
   display: flex;
   background-color: #06f;
   justify-content: center;
-  align-items: center;
+  align-items: stretch;
   color: white;
   padding: 0 20px;
 }
 
+#title h1,
+#title .close {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 #title h1 {
   flex: 1;
-  font-size: 10px;
+  font-size: 14px;
   margin: 0;
 }
 
 #title .close {
-  padding: 10px;
+  padding: 0 10px;
   cursor: pointer;
-  display: block;
 }
 
 #title .close:hover {

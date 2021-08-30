@@ -60,6 +60,7 @@ class CocWebviewServer {
     'client.css': path.resolve(__dirname, '../client.css'),
   };
 
+  public debug = false;
   private instance?: http.Server;
   private wsInstance?: SocketServer;
   public readonly routes = new Map<string, ServerRoute>();
@@ -221,6 +222,7 @@ class CocWebviewServer {
   private genHtml(route: ServerRoute, url: string): string {
     const state = this.states.get(route.routeName);
     const startupOptions: StartupOptions = {
+      debug: this.debug,
       url,
       routeName: route.routeName,
       initState: state,
@@ -236,7 +238,7 @@ class CocWebviewServer {
       <body>
         <div id="title">
           <h1>${route.title}</h1>
-          <a class="close">close</a>
+          <a class="close">x</a>
         </div>
         <iframe id="main" frameBorder="0"></iframe>
         <script type="module">
@@ -291,9 +293,9 @@ class CocWebviewServer {
   }
 
   public removeAndDispose(routeName: string) {
+    this.disposeEmitter.fire({ routeName });
     this.sockets.unregisterAll(routeName);
     this.routes.delete(routeName);
-    this.disposeEmitter.fire({ routeName });
   }
 }
 
@@ -387,11 +389,11 @@ export class ServerConnector {
 
   async disposeSockets() {}
 
-  async dispose() {
-    await this.waitSocket((socket) => {
+  dispose() {
+    this.waitSocket((socket) => {
       logger.debug(`[${this.routeName}][socket ${socket.id}] server dispose`);
       return socket.emit('dispose');
-    });
+    }).catch(logger.error);
     cocWebviewServer.removeAndDispose(this.routeName);
   }
 }

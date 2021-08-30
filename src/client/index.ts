@@ -51,7 +51,9 @@ window.startup = (options: StartupOptions) => {
       log(`close`);
       setHtml('CLOSED');
       win.close();
-      window.close();
+      if (!options.debug) {
+        window.close();
+      }
     };
 
     document.querySelector('#title .close')?.addEventListener('click', () => {

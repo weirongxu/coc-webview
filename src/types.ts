@@ -13,6 +13,7 @@ export type SocketClientEvents = {
 };
 
 export type StartupOptions = {
+  debug: boolean;
   url: string;
   routeName: string;
   initState: any;

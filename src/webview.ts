@@ -4,6 +4,7 @@ import { cocWebviewServer, ServerConnector } from './server';
 import { Webview, WebviewOptions, WebviewPanel, WebviewPanelOnDidChangeViewStateEvent } from './api.types';
 import { logger } from './util';
 import { WebviewList } from './list';
+import { webviewManager } from './manager';
 
 type WebviewPanelOpenOptions = {
   openURL: boolean;
@@ -101,15 +102,10 @@ class CocWebviewPanel implements WebviewPanel {
     window.showMessage(`Launched webview panel ${routeName}`);
     const panel = new CocWebviewPanel(connector, route.host, route.port, viewType, title, routeName, options);
 
-    // add to list
-    const listItem = {
+    webviewManager.add({
       panel,
       route,
       connector,
-    };
-    WebviewList.items.add(listItem);
-    panel.onDidDispose(() => {
-      WebviewList.items.delete(listItem);
     });
 
     return panel;
@@ -153,7 +149,7 @@ class CocWebviewPanel implements WebviewPanel {
   }
 
   dispose() {
-    void this.connector.dispose();
+    this.connector.dispose();
   }
 }
 

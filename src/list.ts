@@ -1,14 +1,8 @@
 import { BasicList, ListItem, ListTask, workspace } from 'coc.nvim';
-import { WebviewPanel } from '.';
-import { cocWebviewServer, ServerConnector, ServerRoute } from './server';
-import { logger } from './util';
 import { Merge } from 'type-fest';
-
-type ItemData = {
-  panel: WebviewPanel;
-  route: ServerRoute;
-  connector: ServerConnector;
-};
+import { ItemData, webviewManager } from './manager';
+import { cocWebviewServer, ServerRoute } from './server';
+import { logger } from './util';
 
 type Item = Merge<
   ListItem,
@@ -18,7 +12,6 @@ type Item = Merge<
 >;
 
 export class WebviewList extends BasicList {
-  public static readonly items: Set<ItemData> = new Set();
   public readonly name = 'webview';
   public readonly defaultAction = 'open';
   public description = 'activated webviews';
@@ -35,7 +28,7 @@ export class WebviewList extends BasicList {
     );
 
     this.addAction(
-      'dispose',
+      'close',
       logger.asyncCatch(async (item: Item) => {
         await item.data.connector.dispose();
       })
@@ -43,7 +36,7 @@ export class WebviewList extends BasicList {
   }
 
   async loadItems(): Promise<ListItem[] | ListTask | null | undefined> {
-    return [...WebviewList.items.values()].map((item) => ({
+    return [...webviewManager.items.values()].map((item) => ({
       label: `${item.route.title} - ${item.route.routeName}`,
       data: item,
     }));

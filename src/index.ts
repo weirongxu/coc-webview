@@ -1,9 +1,11 @@
-import { ExtensionContext, listManager } from 'coc.nvim';
+import { Disposable, ExtensionContext, listManager } from 'coc.nvim';
 import { config } from './config';
 import { WebviewList } from './list';
+import { webviewManager } from './manager';
+import { cocWebviewServer } from './server';
 import { logger } from './util';
-export * from './api.types';
 import { createWebviewPanel } from './webview';
+export * from './api.types';
 
 const webviewAPI = {
   createWebviewPanel,
@@ -12,9 +14,17 @@ const webviewAPI = {
 export type WebviewAPI = typeof webviewAPI;
 
 export function activate(context: ExtensionContext): WebviewAPI {
-  const debug = config.get<boolean>('debug');
+  const debug = config.get<boolean>('debug')!;
   logger.level = debug ? 'debug' : 'info';
+  cocWebviewServer.debug = debug;
 
   context.subscriptions.push(listManager.registerList(new WebviewList()));
+
+  context.subscriptions.push(
+    Disposable.create(() => {
+      webviewManager.disposeAll();
+    })
+  );
+
   return webviewAPI;
 }

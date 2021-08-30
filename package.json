@@ -64,7 +64,7 @@
       "properties": {
         "webview.debug": {
           "type": "boolean",
-          "default": "false"
+          "default": false
         },
         "webview.host": {
           "type": "string",
