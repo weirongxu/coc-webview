@@ -135,7 +135,9 @@ class CocWebviewServer {
         socket.on('register', (routeName: string) => {
           const socketsCount = this.sockets.register(routeName, socket);
           this.registerEmitter.fire({ routeName, socketsCount });
-          window.showMessage(`[${routeName}][socket ${socket.id}] connect count(${socketsCount})`);
+          if (this.debug) {
+            window.showMessage(`[${routeName}][socket ${socket.id}] connect count(${socketsCount})`);
+          }
 
           socket.on('disconnect', () => {
             window.showMessage(`[${routeName}][socket ${socket.id}] disconnect count(${socketsCount})`);
@@ -158,12 +160,16 @@ class CocWebviewServer {
           });
 
           socket.on('postMessage', (message) => {
-            logger.debug(`[${routeName}][socket ${socket.id}] client postMessage ${JSON.stringify(message)}`);
+            if (this.debug) {
+              logger.debug(`[${routeName}][socket ${socket.id}] client postMessage ${JSON.stringify(message)}`);
+            }
             this.postMessagEmitter.fire({ socket, routeName, message });
           });
 
           socket.on('setState', (state) => {
-            logger.debug(`[${routeName}][socket ${socket.id}] client setState ${JSON.stringify(state)}`);
+            if (this.debug) {
+              logger.debug(`[${routeName}][socket ${socket.id}] client setState ${JSON.stringify(state)}`);
+            }
             this.setStateEmitter.fire({ socket, routeName, state });
             this.states.set(routeName, state);
           });
