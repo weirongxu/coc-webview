@@ -19,9 +19,7 @@ window.startup = (options: StartupOptions) => {
   });
 
   if (win) {
-    let storedState = options.initState;
-
-    win.focus();
+    let storedState = options.state;
 
     // @ts-ignore
     win.acquireVsCodeApi = () => {
@@ -41,10 +39,13 @@ window.startup = (options: StartupOptions) => {
       };
     };
 
+    win.focus();
+
     const setHtml = (content: string) => {
       win.document.open();
       win.document.write(content);
       win.document.close();
+      win.focus();
     };
 
     const close = () => {

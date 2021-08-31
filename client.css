@@ -11,13 +11,12 @@ body {
 }
 
 #title {
-  height: 30px;
+  height: 40px;
   display: flex;
-  background-color: #06f;
+  background-color: var(--primary-color);
   justify-content: center;
   align-items: stretch;
   color: white;
-  padding: 0 20px;
 }
 
 #title h1,
@@ -29,17 +28,18 @@ body {
 
 #title h1 {
   flex: 1;
-  font-size: 14px;
+  font-size: 16px;
   margin: 0;
 }
 
 #title .close {
-  padding: 0 10px;
+  padding: 0 20px;
   cursor: pointer;
 }
 
 #title .close:hover {
-  background-color: #0af;
+  background-color: white;
+  color: var(--primary-color);
 }
 
 #main {

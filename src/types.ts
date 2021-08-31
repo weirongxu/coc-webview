@@ -14,7 +14,13 @@ export type SocketClientEvents = {
 
 export type StartupOptions = {
   debug: boolean;
+  primaryColors: {
+    dark: string;
+    light: string;
+  };
   url: string;
   routeName: string;
-  initState: any;
+  state: any;
 };
+
+export type ColorStrategy = 'vim-background' | 'system' | 'dark' | 'light';

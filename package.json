@@ -70,6 +70,40 @@
           "type": "boolean",
           "default": false
         },
+        "webview.colorStrategy": {
+          "enum": [
+            "vim-background",
+            "system",
+            "dark",
+            "light"
+          ],
+          "enumDescriptions": [
+            "Depending on Vim background option",
+            "Depending on Operating System",
+            "Dark",
+            "Light"
+          ],
+          "default": "vim-background"
+        },
+        "webview.primaryColors": {
+          "type": "object",
+          "properties": {
+            "dark": {
+              "type": "string"
+            },
+            "light": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "dark",
+            "light"
+          ],
+          "default": {
+            "dark": "#242424",
+            "light": "#2288ff"
+          }
+        },
         "webview.host": {
           "type": "string",
           "default": "localhost"

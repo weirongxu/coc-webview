@@ -1,10 +1,10 @@
-import { Emitter, window } from 'coc.nvim';
+import { Emitter, window, workspace } from 'coc.nvim';
 import http from 'http';
 import path from 'path';
 import { Server as SocketServer, Socket } from 'socket.io';
 import { URL } from 'url';
 import { config } from './config';
-import { SocketClientEvents, SocketServerEvents, StartupOptions as StartupOptions } from './types';
+import { ColorStrategy, SocketClientEvents, SocketServerEvents, StartupOptions } from './types';
 import { readResourceFile } from './resource';
 import { logger, readFile } from './util';
 import mime from 'mime-types';
@@ -107,7 +107,7 @@ class CocWebviewServer {
               const route = this.routes.get(routeName);
               if (route) {
                 res.writeHead(200, { 'Content-Type': 'text/html' });
-                res.end(this.genHtml(route, `http://${req.headers.host}`));
+                res.end(await this.genHtml(route, `http://${req.headers.host}`));
                 return;
               }
             }
@@ -219,26 +219,61 @@ class CocWebviewServer {
     return this.binded;
   }
 
-  private genHtml(route: ServerRoute, url: string): string {
+  private async genHtml(route: ServerRoute, url: string): Promise<string> {
     const state = this.states.get(route.routeName);
+    const primaryColors = config.get<{
+      dark: string;
+      light: string;
+    }>('primaryColors')!;
     const startupOptions: StartupOptions = {
       debug: this.debug,
+      primaryColors,
       url,
       routeName: route.routeName,
-      initState: state,
+      state,
     };
+
+    // color
+    const colorStrategy = config.get<ColorStrategy>('colorStrategy')!;
+    let colorCss = '';
+    if (colorStrategy === 'vim-background') {
+      const backgroundOption = await workspace.nvim.getOption('background');
+      if (backgroundOption === 'dark') {
+        colorCss = `* { --primary-color: ${primaryColors.dark}; }`;
+      } else if (backgroundOption === 'light') {
+        colorCss = `* { --primary-color: ${primaryColors.light}; }`;
+      }
+    } else if (colorStrategy === 'system') {
+      colorCss = `
+        @media (prefers-color-scheme: light) {
+          * { --primary-color: ${primaryColors.light}; }
+        }
+        @media (prefers-color-scheme: dark) {
+          * { --primary-color: ${primaryColors.dark}; }
+        }
+      `;
+    } else if (colorStrategy === 'dark') {
+      colorCss = `* { --primary-color: ${primaryColors.dark}; }`;
+    } else if (colorStrategy === 'light') {
+      colorCss = `* { --primary-color: ${primaryColors.light}; }`;
+    }
+
     return `
       <!DOCTYPE html>
       <html lang="en">
       <head>
         <meta charset="UTF-8">
         <title>${route.title}</title>
+        <style type="text/css">
+          * { --primary-color: #2288ff; }
+          ${colorCss}
+        </style>
         <link rel="stylesheet" type="text/css" href="${url}/static/client.css" />
       </head>
       <body>
         <div id="title">
           <h1>${route.title}</h1>
-          <a class="close">x</a>
+          <a class="close">×</a>
         </div>
         <iframe id="main" frameBorder="0"></iframe>
         <script type="module">
