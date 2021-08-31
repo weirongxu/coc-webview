@@ -115,7 +115,7 @@ class CocWebviewPanel implements WebviewPanel {
     host: string,
     port: number,
     public readonly viewType: string,
-    public title: string,
+    title: string,
     public routeName: string,
     public readonly options: WebviewOptions = {}
   ) {
@@ -132,6 +132,7 @@ class CocWebviewPanel implements WebviewPanel {
       }
     });
 
+    this.title = title;
     this.webview = new CocWebview(this.connector, host, port, options ?? {});
 
     const onDidChangeViewStateEmitter = new Emitter<WebviewPanelOnDidChangeViewStateEvent>();
@@ -145,6 +146,10 @@ class CocWebviewPanel implements WebviewPanel {
 
   async reveal(options: { openURL: boolean }) {
     await this.connector.reveal(options);
+  }
+
+  set title(content: string) {
+    this.connector.setTitle(content).catch(logger.error);
   }
 
   dispose() {

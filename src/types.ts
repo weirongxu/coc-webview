@@ -6,6 +6,7 @@ export type SocketServerEvents = {
 };
 
 export type SocketClientEvents = {
+  title: (content: string) => void;
   html: (content: string) => void;
   postMessage: (message: any) => void;
   reveal: () => void;

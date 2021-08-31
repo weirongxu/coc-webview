@@ -41,6 +41,12 @@ window.startup = (options: StartupOptions) => {
 
     win.focus();
 
+    const setTitle = (content: string) => {
+      const titleDom = document.querySelector('#title h1');
+      if (titleDom) titleDom.textContent = content;
+      document.title = content;
+    };
+
     const setHtml = (content: string) => {
       win.document.open();
       win.document.write(content);
@@ -65,6 +71,11 @@ window.startup = (options: StartupOptions) => {
     socket.on('postMessage', (message) => {
       log('received postMessage', message);
       win.postMessage(message, '*');
+    });
+
+    socket.on('title', (content) => {
+      log('received title', content);
+      setTitle(content);
     });
 
     socket.on('html', (content) => {

@@ -402,6 +402,13 @@ export class ServerConnector {
     }
   }
 
+  async setTitle(content: string) {
+    await this.waitSocket((socket) => {
+      logger.debug(`[${this.routeName}][socket ${socket.id}] server setTitle`);
+      socket.emit('title', content);
+    });
+  }
+
   async setHtml(content: string) {
     await this.waitSocket((socket) => {
       logger.debug(`[${this.routeName}][socket ${socket.id}] server setHtml`);
