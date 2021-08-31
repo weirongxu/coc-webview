@@ -55,7 +55,7 @@ export async function createPanel(): Promise<WebviewPanel> {
 
 ## TODO
 
-- [ ] dark mode
+- [x] dark mode
 - [ ] reveal highlight
 - [ ] display iconPath
 - [ ] vim keybinding
