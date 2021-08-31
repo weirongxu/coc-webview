@@ -17,6 +17,9 @@ body {
   justify-content: center;
   align-items: stretch;
   color: white;
+  box-shadow: white 0 0 3px;
+  position: relative;
+  z-index: 1;
 }
 
 #title h1,
