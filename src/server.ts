@@ -293,7 +293,7 @@ class CocWebviewServer {
     `;
   }
 
-  private genUrl(route: ServerRoute) {
+  getUrl(route: ServerRoute) {
     return `http://${route.host}:${route.port}/webview/${route.routeName}`;
   }
 
@@ -319,7 +319,7 @@ class CocWebviewServer {
    * Open route in browser or CLI
    */
   public async openRoute(route: ServerRoute) {
-    await open(this.genUrl(route));
+    await open(this.getUrl(route));
   }
 
   /**

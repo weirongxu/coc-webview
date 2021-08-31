@@ -2,7 +2,7 @@ import { BasicList, ListItem, ListTask, workspace } from 'coc.nvim';
 import { Merge } from 'type-fest';
 import { ItemData, webviewManager } from './manager';
 import { cocWebviewServer, ServerRoute } from './server';
-import { logger } from './util';
+import { copyToClipboard, logger } from './util';
 
 type Item = Merge<
   ListItem,
@@ -30,7 +30,15 @@ export class WebviewList extends BasicList {
     this.addAction(
       'close',
       logger.asyncCatch(async (item: Item) => {
-        await item.data.connector.dispose();
+        item.data.connector.dispose();
+      })
+    );
+
+    this.addAction(
+      'copy-url',
+      logger.asyncCatch(async (item: Item) => {
+        const url = cocWebviewServer.getUrl(item.data.route);
+        await copyToClipboard(url);
       })
     );
   }
