@@ -67,10 +67,12 @@
       "title": "Markdown Preview Enhanced",
       "properties": {
         "webview.debug": {
+          "description": "Enable debug mode",
           "type": "boolean",
           "default": false
         },
         "webview.colorStrategy": {
+          "description": "Color strategy for webview",
           "enum": [
             "vim-background",
             "system",
@@ -86,6 +88,7 @@
           "default": "vim-background"
         },
         "webview.primaryColors": {
+          "description": "Primary colors for webview",
           "type": "object",
           "properties": {
             "dark": {
@@ -105,14 +108,17 @@
           }
         },
         "webview.host": {
+          "description": "Listen host for webview service",
           "type": "string",
           "default": "localhost"
         },
         "webview.minPort": {
+          "description": "Mix port for webview service",
           "type": "number",
           "default": "15567"
         },
         "webview.maxPort": {
+          "description": "Max port for webview service",
           "type": "number",
           "default": "15667"
         },

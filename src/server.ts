@@ -7,7 +7,7 @@ import { Server as SocketServer, Socket } from 'socket.io';
 import { URL } from 'url';
 import { readResourceFile } from './resource';
 import { ColorStrategy, SocketClientEvents, SocketServerEvents, StartupOptions } from './types';
-import { config, execCmdLine, logger, readFile } from './util';
+import { config, logger, readFile, spawnCmdLine } from './util';
 
 export type ServerRouteParams = {
   title: string;
@@ -139,7 +139,9 @@ class CocWebviewServer {
           }
 
           socket.on('disconnect', () => {
-            window.showMessage(`[${routeName}][socket ${socket.id}] disconnect count(${socketsCount})`);
+            if (this.debug) {
+              window.showMessage(`[${routeName}][socket ${socket.id}] disconnect count(${socketsCount})`);
+            }
             this.sockets.unregister(routeName, socket);
             this.unregisterEmitter.fire({ routeName, socketsCount });
           });
@@ -282,7 +284,7 @@ class CocWebviewServer {
         </div>
         <iframe id="main" frameBorder="0"></iframe>
         <script type="module">
-          import '${url}/static/client.js'
+          import '${url}/static/client.js';
           window.startup(
             ${JSON.stringify(startupOptions)},
           );

@@ -53,6 +53,18 @@ export async function createPanel(): Promise<WebviewPanel> {
 }
 ```
 
+## Configurations
+
+Usage: https://github.com/neoclide/coc.nvim/wiki/Using-the-configuration-file
+
+- `webview.debug`: Enable debug mode
+- `webview.colorStrategy`: Color strategy for webview
+- `webview.primaryColors`: Primary colors for webview
+- `webview.host`: Listen host for webview service
+- `webview.minPort`: Mix port for webview service
+- `webview.maxPort`: Max port for webview service
+- `webview.openCommand`: Command template for open webview, arguments(%u webview url), example: `chrome "%u"`
+
 ## TODO
 
 - [x] dark mode
