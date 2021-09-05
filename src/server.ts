@@ -1,14 +1,13 @@
 import { Emitter, window, workspace } from 'coc.nvim';
 import http from 'http';
+import mime from 'mime-types';
+import open from 'open';
 import path from 'path';
 import { Server as SocketServer, Socket } from 'socket.io';
 import { URL } from 'url';
-import { config } from './config';
-import { ColorStrategy, SocketClientEvents, SocketServerEvents, StartupOptions } from './types';
 import { readResourceFile } from './resource';
-import { logger, readFile } from './util';
-import mime from 'mime-types';
-import open from 'open';
+import { ColorStrategy, SocketClientEvents, SocketServerEvents, StartupOptions } from './types';
+import { config, execCmdLine, logger, readFile } from './util';
 
 export type ServerRouteParams = {
   title: string;
@@ -315,11 +314,23 @@ class CocWebviewServer {
     return new ServerConnector(this, routeName);
   }
 
+  private async openURL(url: string) {
+    const openCommand = config.get<string>('openCommand');
+    if (openCommand === 'nodejs:module') {
+      await open(url);
+    } else if (openCommand) {
+      spawnCmdLine(openCommand.replace(new RegExp('%u', 'g'), url), [], {
+        shell: true,
+        detached: true,
+      }).catch(logger.error);
+    }
+  }
+
   /**
    * Open route in browser or CLI
    */
   public async openRoute(route: ServerRoute) {
-    await open(this.getUrl(route));
+    await this.openURL(this.getUrl(route));
   }
 
   /**

@@ -115,6 +115,29 @@
         "webview.maxPort": {
           "type": "number",
           "default": "15667"
+        },
+        "webview.openCommand": {
+          "description": "Command template for open webview, arguments(%u webview url), example: 'chrome \"%u\"'",
+          "anyOf": [
+            {
+              "enum": [
+                "nodejs:module",
+                "chrome \"%u\"",
+                "firefox \"%u\"",
+                "open -a \"Google Chrome\" \"%u\"",
+                "open -a Firefox \"%u\"",
+                "open -a Safari \"%u\""
+              ],
+              "enumDescriptions": [
+                "Use nodejs module"
+              ]
+            },
+            {
+              "description": "Use template string as trash command",
+              "type": "string"
+            }
+          ],
+          "default": "nodejs:module"
         }
       }
     }

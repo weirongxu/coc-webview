@@ -1,9 +1,8 @@
 import { Disposable, ExtensionContext, listManager } from 'coc.nvim';
-import { config } from './config';
 import { WebviewList } from './list';
 import { webviewManager } from './manager';
 import { cocWebviewServer } from './server';
-import { logger } from './util';
+import { config, logger } from './util';
 import { createWebviewPanel } from './webview';
 export * from './api.types';
 
