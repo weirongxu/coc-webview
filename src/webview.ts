@@ -96,7 +96,7 @@ class CocWebviewPanel implements WebviewPanel {
     });
     logger.info(`added routeName ${routeName}`);
     if (openOptions.openURL) {
-      await cocWebviewServer.openRoute(route);
+      cocWebviewServer.openRoute(route);
     }
     window.showMessage(`Launched webview panel ${routeName}`);
     const panel = new CocWebviewPanel(connector, route.host, route.port, viewType, title, routeName, options);

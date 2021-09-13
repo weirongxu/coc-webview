@@ -23,7 +23,7 @@ export class WebviewList extends BasicList {
       'open',
       logger.asyncCatch(async (item: Item) => {
         const route: ServerRoute = item.data.route;
-        await cocWebviewServer.openRoute(route);
+        cocWebviewServer.openRoute(route);
       })
     );
 

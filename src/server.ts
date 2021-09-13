@@ -1,13 +1,12 @@
 import { Emitter, window, workspace } from 'coc.nvim';
 import http from 'http';
 import mime from 'mime-types';
-import open from 'open';
 import path from 'path';
 import { Server as SocketServer, Socket } from 'socket.io';
 import { URL } from 'url';
 import { readResourceFile } from './resource';
 import { ColorStrategy, SocketClientEvents, SocketServerEvents, StartupOptions } from './types';
-import { config, logger, readFile, spawnCmdLine } from './util';
+import { config, logger, readFile, util } from './util';
 
 export type ServerRouteParams = {
   title: string;
@@ -316,34 +315,22 @@ class CocWebviewServer {
     return new ServerConnector(this, routeName);
   }
 
-  private async openURL(url: string) {
-    const openCommand = config.get<string>('openCommand');
-    if (openCommand === 'nodejs:module') {
-      await open(url);
-    } else if (openCommand) {
-      spawnCmdLine(openCommand.replace(new RegExp('%u', 'g'), url), [], {
-        shell: true,
-        detached: true,
-      }).catch(logger.error);
-    }
+  /**
+   * Open route in browser or CLI
+   */
+  public openRoute(route: ServerRoute) {
+    util.openUri(this.getUrl(route));
   }
 
   /**
    * Open route in browser or CLI
    */
-  public async openRoute(route: ServerRoute) {
-    await this.openURL(this.getUrl(route));
-  }
-
-  /**
-   * Open route in browser or CLI
-   */
-  public async openByRouteName(routeName: string) {
+  public openByRouteName(routeName: string) {
     const route = this.routes.get(routeName);
     if (!route) {
       return;
     }
-    await this.openRoute(route);
+    this.openRoute(route);
   }
 
   public removeAndDispose(routeName: string) {

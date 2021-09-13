@@ -26,19 +26,20 @@ const getWebviewAPI = () => {
     webviewExt = extensions.all.find((ext) => ext.id === 'coc-webview') as Extension<WebviewAPI> | undefined;
   }
   if (!webviewExt) {
-    void window.showErrorMessage('Please install the coc-webview extension');
-    throw new Error('Please install the coc-webview extension');
+    const hint = 'Please install the coc-webview extension';
+    void window.showErrorMessage(hint);
+    throw new Error(hint);
   }
   return webviewExt.exports;
 };
 
 // create webview panel
-export async function createPanel(): Promise<WebviewPanel> {
-  return getWebviewAPI().createWebviewPanel(
+export async function example(): Promise<void> {
+  const panel = await getWebviewAPI().createWebviewPanel(
     // viewType
     'markdown-preview-enhanced',
     // title
-    `Preview ${path.basename(sourceUri.fsPath)}`,
+    `Preview markdown`,
     {
       // open in browser
       openURL: true,
@@ -50,6 +51,22 @@ export async function createPanel(): Promise<WebviewPanel> {
       enableScripts: true,
     }
   );
+
+  // update title
+  panel.title = 'Preview markdown-2'
+
+  // update html
+  panel.webview.html = '<html>...</html>'
+
+  // postMessage
+  panel.webview.postMessage({type: 'command', 'token': 'xxx'})
+
+  this.onDidReceiveMessage((msg: {type: string, token: string}) => {
+    // msg.type
+  });
+
+  cosnt util = getWebviewAPI().util;
+  util.openUri('https://domain.com/');
 }
 ```
 
