@@ -19,7 +19,7 @@ class CocWebview implements Webview {
     private readonly connector: ServerConnector,
     private host: string,
     private port: number,
-    public options: WebviewOptions
+    public options: WebviewOptions,
   ) {
     this.onDidReceiveMessage = connector.postMessageEmitter.event;
     // TODO
@@ -40,7 +40,7 @@ class CocWebview implements Webview {
       !this.options.localResourceRoots.some((root) => localResource.toString().startsWith(root.toString()))
     ) {
       throw new Error(
-        'asWebviewUri: The resource cannot be created because the localResource is not inside the localResourceRoots'
+        'asWebviewUri: The resource cannot be created because the localResource is not inside the localResourceRoots',
       );
     }
     return asWebviewUri(localResource, { host: this.host, port: this.port });
@@ -87,7 +87,7 @@ class CocWebviewPanel implements WebviewPanel {
     viewType: string,
     title: string,
     openOptions: WebviewPanelOpenOptions,
-    options: WebviewOptions = {}
+    options: WebviewOptions = {},
   ) {
     const { routeName } = openOptions;
     const { route, connector } = await cocWebviewServer.add({
@@ -117,7 +117,7 @@ class CocWebviewPanel implements WebviewPanel {
     public readonly viewType: string,
     title: string,
     public routeName: string,
-    public readonly options: WebviewOptions = {}
+    public readonly options: WebviewOptions = {},
   ) {
     this.active = false;
     this.visible = false;
@@ -161,7 +161,7 @@ export async function createWebviewPanel(
   viewType: string,
   title: string,
   openOptions: WebviewPanelOpenOptions,
-  options?: WebviewOptions
+  options?: WebviewOptions,
 ): Promise<WebviewPanel> {
   return CocWebviewPanel.create(viewType, title, openOptions, options);
 }

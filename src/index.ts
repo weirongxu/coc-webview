@@ -18,12 +18,12 @@ export function activate(context: ExtensionContext): WebviewAPI {
   logger.level = debug ? 'debug' : 'info';
   cocWebviewServer.debug = debug;
 
-  context.subscriptions.push(listManager.registerList(new WebviewList()));
-
   context.subscriptions.push(
+    listManager.registerList(new WebviewList()),
     Disposable.create(() => {
       webviewManager.disposeAll();
-    })
+    }),
+    cocWebviewServer,
   );
 
   return webviewAPI;

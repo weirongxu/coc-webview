@@ -1,4 +1,4 @@
-import { Emitter, window, workspace } from 'coc.nvim';
+import { Disposable, Emitter, window, workspace } from 'coc.nvim';
 import http from 'http';
 import mime from 'mime-types';
 import path from 'path';
@@ -52,7 +52,7 @@ class SocketManager {
   }
 }
 
-class CocWebviewServer {
+class CocWebviewServer implements Disposable {
   private static staticRoutes: Record<string, string> = {
     'client.js': path.join(__dirname, 'client.js'),
     'client.css': path.resolve(__dirname, '../client.css'),
@@ -223,6 +223,13 @@ class CocWebviewServer {
     logger.info(`Server started at ${port}`);
     this.binded = { host, port };
     return this.binded;
+  }
+
+  dispose() {
+    this.instance?.close();
+    this.instance = undefined;
+    this.wsInstance?.close();
+    this.wsInstance = undefined;
   }
 
   private async genHtml(route: ServerRoute, url: string): Promise<string> {

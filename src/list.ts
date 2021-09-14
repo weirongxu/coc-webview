@@ -24,14 +24,14 @@ export class WebviewList extends BasicList {
       logger.asyncCatch(async (item: Item) => {
         const route: ServerRoute = item.data.route;
         cocWebviewServer.openRoute(route);
-      })
+      }),
     );
 
     this.addAction(
       'close',
       logger.asyncCatch(async (item: Item) => {
         item.data.connector.dispose();
-      })
+      }),
     );
 
     this.addAction(
@@ -39,7 +39,7 @@ export class WebviewList extends BasicList {
       logger.asyncCatch(async (item: Item) => {
         const url = cocWebviewServer.getUrl(item.data.route);
         await copyToClipboard(url);
-      })
+      }),
     );
   }
 
