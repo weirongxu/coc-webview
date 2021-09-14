@@ -89,6 +89,10 @@ window.startup = (options: StartupOptions) => {
 
   win.focus();
 
+  document.addEventListener('visibilitychange', () => {
+    socket.emit('visible', !document.hidden);
+  });
+
   document.querySelector('#title .close')?.addEventListener('click', () => {
     socket.emit('dispose');
     close();

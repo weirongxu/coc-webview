@@ -1,4 +1,4 @@
-import { Emitter, Event, Uri, window } from 'coc.nvim';
+import { Disposable, Emitter, Event, Uri, window } from 'coc.nvim';
 import { Webview, WebviewOptions, WebviewPanel, WebviewPanelOnDidChangeViewStateEvent } from './api.types';
 import { webviewManager } from './manager';
 import { asWebviewUri } from './resource';
@@ -11,9 +11,8 @@ type WebviewPanelOpenOptions = {
 };
 
 class CocWebview implements Webview {
-  readonly onDidReceiveMessage: Event<any>;
-
-  readonly cspSource: string;
+  public readonly onDidReceiveMessage: Event<any>;
+  public readonly cspSource: string;
 
   constructor(
     private readonly connector: ServerConnector,
@@ -21,7 +20,11 @@ class CocWebview implements Webview {
     private port: number,
     public options: WebviewOptions,
   ) {
-    this.onDidReceiveMessage = connector.postMessageEmitter.event;
+    const onDidReceiveMessageEmitter = new Emitter();
+    connector.events.on('postMessage', (msg) => {
+      onDidReceiveMessageEmitter.fire(msg);
+    });
+    this.onDidReceiveMessage = onDidReceiveMessageEmitter.event;
     // TODO
     this.cspSource = '';
   }
@@ -83,6 +86,8 @@ class CocWebviewPanel implements WebviewPanel {
    */
   public readonly onDidDispose: Event<void>;
 
+  private disposables: Disposable[] = [];
+
   static async create(
     viewType: string,
     title: string,
@@ -121,27 +126,42 @@ class CocWebviewPanel implements WebviewPanel {
   ) {
     this.active = false;
     this.visible = false;
-    this.connector.registerEmitter.event(() => {
-      this.active = true;
-      this.visible = true;
-    });
-    this.connector.unregisterEmitter.event(({ socketsCount }) => {
-      if (socketsCount <= 0) {
-        this.active = false;
-        this.visible = false;
-      }
-    });
+    this.disposables.push(
+      this.connector.events.on('register', () => {
+        this.active = true;
+        this.visible = true;
+      }),
+      this.connector.events.on('unregister', (socketsCount) => {
+        if (socketsCount <= 0) {
+          this.active = false;
+          this.visible = false;
+        }
+      }),
+      this.connector.events.on('visible', (visible) => {
+        this.visible = visible;
+      }),
+    );
 
     this.title = title;
     this.webview = new CocWebview(this.connector, host, port, options ?? {});
 
     const onDidChangeViewStateEmitter = new Emitter<WebviewPanelOnDidChangeViewStateEvent>();
     this.onDidChangeViewState = onDidChangeViewStateEmitter.event;
-    this.connector.setStateEmitter.event(() => {
-      onDidChangeViewStateEmitter.fire({ webviewPanel: this });
-    });
+    this.disposables.push(
+      onDidChangeViewStateEmitter,
+      this.connector.events.on('setState', () => {
+        onDidChangeViewStateEmitter.fire({ webviewPanel: this });
+      }),
+    );
 
-    this.onDidDispose = this.connector.disposeEmitter.event;
+    const onDidDisposeEmitter = new Emitter<void>();
+    this.onDidDispose = onDidDisposeEmitter.event;
+    this.disposables.push(
+      onDidDisposeEmitter,
+      this.connector.events.on('dispose', () => {
+        onDidDisposeEmitter.fire();
+      }),
+    );
   }
 
   async reveal(options: { openURL: boolean }) {

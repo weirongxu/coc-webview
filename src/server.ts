@@ -1,11 +1,19 @@
-import { Disposable, Emitter, window, workspace } from 'coc.nvim';
+import { HelperEventEmitter } from 'coc-helper';
+import { Disposable, workspace } from 'coc.nvim';
 import http from 'http';
 import mime from 'mime-types';
 import path from 'path';
 import { Server as SocketServer, Socket } from 'socket.io';
 import { URL } from 'url';
 import { readResourceFile } from './resource';
-import { ColorStrategy, SocketClientEvents, SocketServerEvents, StartupOptions } from './types';
+import {
+  Arguments,
+  ColorStrategy,
+  ServerConnectorEvents,
+  SocketClientEvents,
+  SocketServerEvents,
+  StartupOptions,
+} from './types';
 import { config, logger, readFile, util } from './util';
 
 export type ServerRouteParams = {
@@ -64,19 +72,7 @@ class CocWebviewServer implements Disposable {
   public readonly routes = new Map<string, ServerRoute>();
   public readonly sockets = new SocketManager();
   public readonly states = new Map<string, unknown>();
-  public readonly registerEmitter = new Emitter<{ routeName: string; socketsCount: number }>();
-  public readonly unregisterEmitter = new Emitter<{ routeName: string; socketsCount: number }>();
-  public readonly disposeEmitter = new Emitter<{ routeName: string }>();
-  public readonly postMessagEmitter = new Emitter<{
-    socket: Socket;
-    routeName: string;
-    message: any;
-  }>();
-  public readonly setStateEmitter = new Emitter<{
-    socket: Socket;
-    routeName: string;
-    state: any;
-  }>();
+  public readonly connectors = new Map<string, ServerConnector>();
   public binded?: {
     host: string;
     port: number;
@@ -131,18 +127,24 @@ class CocWebviewServer implements Disposable {
       this.wsInstance = new SocketServer(this.instance);
       this.wsInstance.on('connection', (socket) => {
         socket.on('register', (routeName: string) => {
+          const msgPrefix = `[${routeName}][socket ${socket.id}] `;
+          const logDebug = (content: string) => {
+            logger.debug(`${msgPrefix}${content}`);
+          };
+          const showMessage = (content: string) => {
+            if (this.debug) {
+              logger.info(`${msgPrefix}${content}`);
+            }
+          };
+
           const socketsCount = this.sockets.register(routeName, socket);
-          this.registerEmitter.fire({ routeName, socketsCount });
-          if (this.debug) {
-            window.showMessage(`[${routeName}][socket ${socket.id}] connect count(${socketsCount})`);
-          }
+          this.emitConnector(routeName, 'register', socketsCount);
+          showMessage(`connect count(${socketsCount})`);
 
           socket.on('disconnect', () => {
-            if (this.debug) {
-              window.showMessage(`[${routeName}][socket ${socket.id}] disconnect count(${socketsCount})`);
-            }
+            showMessage(`disconnect count(${socketsCount})`);
             this.sockets.unregister(routeName, socket);
-            this.unregisterEmitter.fire({ routeName, socketsCount });
+            this.emitConnector(routeName, 'unregister', socketsCount);
           });
 
           socket.on('dispose', () => {
@@ -160,18 +162,19 @@ class CocWebviewServer implements Disposable {
           });
 
           socket.on('postMessage', (message) => {
-            if (this.debug) {
-              logger.debug(`[${routeName}][socket ${socket.id}] client postMessage ${JSON.stringify(message)}`);
-            }
-            this.postMessagEmitter.fire({ socket, routeName, message });
+            logDebug(`client postMessage ${JSON.stringify(message)}`);
+            this.emitConnector(routeName, 'postMessage', message);
           });
 
           socket.on('setState', (state) => {
-            if (this.debug) {
-              logger.debug(`[${routeName}][socket ${socket.id}] client setState ${JSON.stringify(state)}`);
-            }
-            this.setStateEmitter.fire({ socket, routeName, state });
+            logDebug(`client setState ${JSON.stringify(state)}`);
+            this.emitConnector(routeName, 'setState', state);
             this.states.set(routeName, state);
+          });
+
+          socket.on('visible', (visible) => {
+            logDebug(`client visible(${visible})`);
+            this.emitConnector(routeName, 'visible', visible);
           });
         });
       });
@@ -252,23 +255,23 @@ class CocWebviewServer implements Disposable {
     if (colorStrategy === 'vim-background') {
       const backgroundOption = await workspace.nvim.getOption('background');
       if (backgroundOption === 'dark') {
-        colorCss = `* { --primary-color: ${primaryColors.dark}; }`;
+        colorCss = `:root { --primary-color: ${primaryColors.dark}; }`;
       } else if (backgroundOption === 'light') {
-        colorCss = `* { --primary-color: ${primaryColors.light}; }`;
+        colorCss = `:root { --primary-color: ${primaryColors.light}; }`;
       }
     } else if (colorStrategy === 'system') {
       colorCss = `
         @media (prefers-color-scheme: light) {
-          * { --primary-color: ${primaryColors.light}; }
+          :root { --primary-color: ${primaryColors.light}; }
         }
         @media (prefers-color-scheme: dark) {
-          * { --primary-color: ${primaryColors.dark}; }
+          :root { --primary-color: ${primaryColors.dark}; }
         }
       `;
     } else if (colorStrategy === 'dark') {
-      colorCss = `* { --primary-color: ${primaryColors.dark}; }`;
+      colorCss = `:root { --primary-color: ${primaryColors.dark}; }`;
     } else if (colorStrategy === 'light') {
-      colorCss = `* { --primary-color: ${primaryColors.light}; }`;
+      colorCss = `:root { --primary-color: ${primaryColors.light}; }`;
     }
 
     return `
@@ -278,7 +281,7 @@ class CocWebviewServer implements Disposable {
         <meta charset="UTF-8">
         <title>${route.title}</title>
         <style type="text/css">
-          * { --primary-color: #2288ff; }
+          :root { --primary-color: #2288ff; }
           ${colorCss}
         </style>
         <link rel="stylesheet" type="text/css" href="${url}/static/client.css" />
@@ -313,13 +316,25 @@ class CocWebviewServer implements Disposable {
     };
     this.routes.set(routeParams.routeName, route);
     return {
-      connector: this.sender(routeParams.routeName),
+      connector: this.createConnector(routeParams.routeName),
       route,
     };
   }
 
-  public sender(routeName: string) {
-    return new ServerConnector(this, routeName);
+  private emitConnector<R extends keyof ServerConnectorEvents>(
+    routeName: string,
+    event: R,
+    ...args: Arguments<ServerConnectorEvents[R]>
+  ) {
+    const connector = this.connectors.get(routeName);
+    if (connector) {
+      connector.events.fire(event, ...args).catch(logger.error);
+    }
+  }
+  private createConnector(routeName: string) {
+    const connector = new ServerConnector(this, routeName);
+    this.connectors.set(routeName, connector);
+    return connector;
   }
 
   /**
@@ -341,50 +356,16 @@ class CocWebviewServer implements Disposable {
   }
 
   public removeAndDispose(routeName: string) {
-    this.disposeEmitter.fire({ routeName });
+    this.emitConnector(routeName, 'dispose');
     this.sockets.unregisterAll(routeName);
     this.routes.delete(routeName);
   }
 }
 
 export class ServerConnector {
-  public readonly registerEmitter = new Emitter<{ socketsCount: number }>();
-  public readonly unregisterEmitter = new Emitter<{ socketsCount: number }>();
-  public readonly disposeEmitter = new Emitter<void>();
-  public readonly postMessageEmitter = new Emitter<any>();
-  public readonly setStateEmitter = new Emitter<any>();
+  public readonly events = new HelperEventEmitter<ServerConnectorEvents>(logger);
 
-  constructor(private server: CocWebviewServer, private routeName: string) {
-    this.server.registerEmitter.event(({ routeName, socketsCount }) => {
-      if (routeName === this.routeName) {
-        this.registerEmitter.fire({ socketsCount });
-      }
-    });
-
-    this.server.unregisterEmitter.event(({ routeName, socketsCount }) => {
-      if (routeName === this.routeName) {
-        this.unregisterEmitter.fire({ socketsCount });
-      }
-    });
-
-    this.server.disposeEmitter.event(({ routeName }) => {
-      if (routeName === this.routeName) {
-        this.disposeEmitter.fire();
-      }
-    });
-
-    this.server.postMessagEmitter.event(({ routeName, message }) => {
-      if (routeName === this.routeName) {
-        this.postMessageEmitter.fire(message);
-      }
-    });
-
-    this.server.setStateEmitter.event(({ routeName, state }) => {
-      if (routeName === this.routeName) {
-        this.setStateEmitter.fire(state);
-      }
-    });
-  }
+  constructor(private server: CocWebviewServer, public readonly routeName: string) {}
 
   async waitSocket<T>(run: (socket: ServerSocket) => T): Promise<T[]> {
     const sockets = this.server.sockets.get(this.routeName);
@@ -399,7 +380,7 @@ export class ServerConnector {
       return runSockets(sockets);
     } else {
       return new Promise<T[]>((resolve) => {
-        this.registerEmitter.event(() => {
+        this.events.once('register', () => {
           const sockets = this.server.sockets.get(this.routeName);
           if (sockets) {
             resolve(runSockets(sockets));
@@ -433,7 +414,7 @@ export class ServerConnector {
 
   async reveal(options: { openURL: boolean }): Promise<boolean> {
     if (options.openURL) {
-      await this.server.openByRouteName(this.routeName);
+      this.server.openByRouteName(this.routeName);
     }
     const results = await this.waitSocket((socket) => {
       logger.debug(`[${this.routeName}][socket ${socket.id}] server reveal`);
