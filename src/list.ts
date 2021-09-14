@@ -41,6 +41,13 @@ export class WebviewList extends BasicList {
         await copyToClipboard(url);
       }),
     );
+
+    this.addAction(
+      'reveal',
+      logger.asyncCatch(async (item: Item) => {
+        item.data.panel.reveal({ openURL: false });
+      }),
+    );
   }
 
   async loadItems(): Promise<ListItem[] | ListTask | null | undefined> {

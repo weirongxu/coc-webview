@@ -291,6 +291,7 @@ class CocWebviewServer implements Disposable {
           <h1>${route.title}</h1>
           <a class="close">×</a>
         </div>
+        <div id="reveal-cover" style="display: none;"></div>
         <iframe id="main" frameBorder="0"></iframe>
         <script type="module">
           import '${url}/static/client.js';

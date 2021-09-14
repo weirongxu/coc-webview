@@ -19,6 +19,7 @@ window.startup = (options: StartupOptions) => {
 
   let storedState = options.state;
 
+  // acquireVsCodeApi
   // @ts-ignore
   win.acquireVsCodeApi = () => {
     return {
@@ -37,43 +38,90 @@ window.startup = (options: StartupOptions) => {
     };
   };
 
+  // register
   socket.on('connect', () => {
     log(`register`);
     socket.emit('register', routeName);
   });
 
+  // postMessage
   socket.on('postMessage', (message) => {
     log('received postMessage', message);
     win.postMessage(message, '*');
   });
 
-  const setTitle = (content: string) => {
+  // update title
+  let title = document.title;
+  socket.on('title', (content) => {
+    log('received title', content);
+    title = content;
     const titleDom = document.querySelector('#title h1');
     if (titleDom) titleDom.textContent = content;
     document.title = content;
-  };
-
-  socket.on('title', (content) => {
-    log('received title', content);
-    setTitle(content);
   });
 
+  // update html
   const setHtml = (content: string) => {
     win.document.open();
     win.document.write(content);
     win.document.close();
     win.focus();
   };
-
   socket.on('html', (content) => {
     log('received html', content);
     setHtml(content);
   });
 
+  // reveal
+  const revealCover = document.getElementById('reveal-cover') as HTMLDivElement;
+  revealCover.addEventListener('transitionend', () => {
+    console.log('transitionend');
+    revealCover.style.background = '';
+  });
+  const titleFlasher = {
+    timer: undefined as NodeJS.Timer | undefined,
+    start() {
+      let reveal = true;
+      titleFlasher.timer = setInterval(() => {
+        document.title = reveal ? `[REVEAL] ${title}` : title;
+        reveal = !reveal;
+      }, 500);
+    },
+    stop() {
+      if (titleFlasher.timer) {
+        clearInterval(titleFlasher.timer);
+        titleFlasher.timer = undefined;
+        document.title = title;
+      }
+    },
+  };
   socket.on('reveal', () => {
-    // TODO flash
+    if (!visible) {
+      titleFlasher.start();
+    }
+
+    const flashTimes = 2;
+    const intervalTime = 0.6;
+    revealCover.style.transition = `background ${intervalTime / 2}s`;
+    revealCover.style.display = 'block';
+
+    for (let i = 0; i < flashTimes; i++) {
+      setTimeout(() => {
+        revealCover.style.background = 'rgba(0,0,0, 0.7)';
+      }, i * intervalTime * 1000);
+    }
+
+    setTimeout(() => {
+      revealCover.style.display = 'none';
+      revealCover.style.background = '';
+    }, flashTimes * intervalTime * 1000);
   });
 
+  socket.on('disconnect', () => {
+    titleFlasher.stop();
+  });
+
+  // user close
   const close = () => {
     log(`close`);
     setHtml('CLOSED');
@@ -83,14 +131,21 @@ window.startup = (options: StartupOptions) => {
     }
   };
 
+  // dispose from vim
   socket.on('dispose', () => {
+    titleFlasher.stop();
     close();
   });
 
   win.focus();
 
+  let visible = true;
   document.addEventListener('visibilitychange', () => {
-    socket.emit('visible', !document.hidden);
+    visible = !document.hidden;
+    if (visible) {
+      titleFlasher.stop();
+    }
+    socket.emit('visible', visible);
   });
 
   document.querySelector('#title .close')?.addEventListener('click', () => {
