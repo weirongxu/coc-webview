@@ -5,7 +5,7 @@ import mime from 'mime-types';
 import path from 'path';
 import { Server as SocketServer, Socket } from 'socket.io';
 import { URL } from 'url';
-import { readResourceFile } from './resource';
+import { ResourceUri } from './resource';
 import {
   Arguments,
   ColorStrategy,
@@ -14,7 +14,7 @@ import {
   SocketServerEvents,
   StartupOptions,
 } from './types';
-import { config, logger, readFile, util } from './util';
+import { config, logger, openUri, readFile } from './util';
 
 export type ServerRouteParams = {
   title: string;
@@ -81,43 +81,8 @@ class CocWebviewServer implements Disposable {
   public async tryCreate(): Promise<{ host: string; port: number }> {
     if (!this.instance) {
       this.instance = http.createServer(async (req, res) => {
-        if (req.url) {
-          const url = new URL(req.url, `http://${req.headers.host}`);
-          const pathname = url.pathname;
-          logger.debug(`request pathname ${pathname}`);
-          if (pathname.startsWith('/resources')) {
-            const resourceId = pathname.split('/').pop();
-            if (resourceId) {
-              const content = await readResourceFile(resourceId);
-              res.writeHead(200);
-              res.end(content);
-              return;
-            }
-          }
-          if (pathname.startsWith('/webview')) {
-            const routeName = pathname.split('/').pop();
-            logger.debug(`request routeName ${routeName}`);
-            if (routeName) {
-              const route = this.routes.get(routeName);
-              if (route) {
-                res.writeHead(200, { 'Content-Type': 'text/html' });
-                res.end(await this.genHtml(route, `http://${req.headers.host}`));
-                return;
-              }
-            }
-          }
-          if (pathname.startsWith('/static')) {
-            const filename = pathname.split('/').pop();
-            if (filename && CocWebviewServer.staticRoutes.hasOwnProperty(filename)) {
-              const mimeStr = mime.lookup(filename);
-              const path = CocWebviewServer.staticRoutes[filename];
-              const content = await readFile(path);
-              res.writeHead(200, { 'Content-Type': mimeStr || undefined });
-              res.end(content);
-              return;
-            }
-          }
-
+        const rendered = await this.bindRoutes(req, res);
+        if (!rendered) {
           res.writeHead(404);
           res.end('COC WEBVIEW NOT FOUND');
         }
@@ -126,57 +91,7 @@ class CocWebviewServer implements Disposable {
     if (!this.wsInstance) {
       this.wsInstance = new SocketServer(this.instance);
       this.wsInstance.on('connection', (socket) => {
-        socket.on('register', (routeName: string) => {
-          const msgPrefix = `[${routeName}][socket ${socket.id}] `;
-          const logDebug = (content: string) => {
-            logger.debug(`${msgPrefix}${content}`);
-          };
-          const showMessage = (content: string) => {
-            if (this.debug) {
-              logger.info(`${msgPrefix}${content}`);
-            }
-          };
-
-          const socketsCount = this.sockets.register(routeName, socket);
-          this.emitConnector(routeName, 'register', socketsCount);
-          showMessage(`connect count(${socketsCount})`);
-
-          socket.on('disconnect', () => {
-            showMessage(`disconnect count(${socketsCount})`);
-            this.sockets.unregister(routeName, socket);
-            this.emitConnector(routeName, 'unregister', socketsCount);
-          });
-
-          socket.on('dispose', () => {
-            const sockets = this.sockets.get(routeName);
-            if (sockets) {
-              for (const [, s] of sockets) {
-                if (s === socket) {
-                  continue;
-                }
-                s.emit('dispose');
-              }
-            }
-
-            this.removeAndDispose(routeName);
-          });
-
-          socket.on('postMessage', (message) => {
-            logDebug(`client postMessage ${JSON.stringify(message)}`);
-            this.emitConnector(routeName, 'postMessage', message);
-          });
-
-          socket.on('setState', (state) => {
-            logDebug(`client setState ${JSON.stringify(state)}`);
-            this.emitConnector(routeName, 'setState', state);
-            this.states.set(routeName, state);
-          });
-
-          socket.on('visible', (visible) => {
-            logDebug(`client visible(${visible})`);
-            this.emitConnector(routeName, 'visible', visible);
-          });
-        });
+        this.bindWs(socket);
       });
     }
 
@@ -187,7 +102,108 @@ class CocWebviewServer implements Disposable {
     }
   }
 
-  async tryStart(server: http.Server): Promise<{ host: string; port: number }> {
+  private async bindRoutes(req: http.IncomingMessage, res: http.ServerResponse) {
+    if (!req.url) {
+      return false;
+    }
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const pathname = url.pathname;
+    logger.debug(`request pathname ${pathname}`);
+    const resourceUri = ResourceUri.parse(url);
+    if (resourceUri.isResource) {
+      const fsPath = resourceUri.fsPath;
+      if (!fsPath) {
+        return false;
+      }
+      const content = await resourceUri.readFile();
+      if (!content) {
+        return false;
+      }
+      const filename = path.basename(resourceUri.fsPath);
+      const mimeStr = mime.lookup(filename);
+      res.writeHead(200, { 'Content-Type': mimeStr || undefined });
+      res.end(content);
+      return true;
+    } else if (pathname.startsWith('/webview')) {
+      const routeName = pathname.split('/').pop();
+      logger.debug(`request routeName ${routeName}`);
+      if (routeName) {
+        const route = this.routes.get(routeName);
+        if (route) {
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+          res.end(await this.genHtml(route, `http://${req.headers.host}`));
+          return true;
+        }
+      }
+    } else if (pathname.startsWith('/static')) {
+      const filename = pathname.split('/').pop();
+      if (filename && CocWebviewServer.staticRoutes.hasOwnProperty(filename)) {
+        const mimeStr = mime.lookup(filename);
+        const path = CocWebviewServer.staticRoutes[filename];
+        const content = await readFile(path);
+        res.writeHead(200, { 'Content-Type': mimeStr || undefined });
+        res.end(content);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private bindWs(socket: Socket) {
+    socket.on('register', (routeName: string) => {
+      const msgPrefix = `[${routeName}][socket ${socket.id}] `;
+      const logDebug = (content: string) => {
+        logger.debug(`${msgPrefix}${content}`);
+      };
+      const showMessage = (content: string) => {
+        if (this.debug) {
+          logger.info(`${msgPrefix}${content}`);
+        }
+      };
+
+      const socketsCount = this.sockets.register(routeName, socket);
+      this.emitConnector(routeName, 'register', socketsCount);
+      showMessage(`connect count(${socketsCount})`);
+
+      socket.on('disconnect', () => {
+        showMessage(`disconnect count(${socketsCount})`);
+        this.sockets.unregister(routeName, socket);
+        this.emitConnector(routeName, 'unregister', socketsCount);
+      });
+
+      socket.on('dispose', () => {
+        const sockets = this.sockets.get(routeName);
+        if (sockets) {
+          for (const [, s] of sockets) {
+            if (s === socket) {
+              continue;
+            }
+            s.emit('dispose');
+          }
+        }
+
+        this.removeAndDispose(routeName);
+      });
+
+      socket.on('postMessage', (message) => {
+        logDebug(`client postMessage ${JSON.stringify(message)}`);
+        this.emitConnector(routeName, 'postMessage', message);
+      });
+
+      socket.on('setState', (state) => {
+        logDebug(`client setState ${JSON.stringify(state)}`);
+        this.emitConnector(routeName, 'setState', state);
+        this.states.set(routeName, state);
+      });
+
+      socket.on('visible', (visible) => {
+        logDebug(`client visible(${visible})`);
+        this.emitConnector(routeName, 'visible', visible);
+      });
+    });
+  }
+
+  private async tryStart(server: http.Server): Promise<{ host: string; port: number }> {
     const host = config.get<string>('host')!;
     const minPort = config.get<number>('minPort')!;
     const maxPort = config.get<number>('maxPort')!;
@@ -342,7 +358,7 @@ class CocWebviewServer implements Disposable {
    * Open route in browser or CLI
    */
   public openRoute(route: ServerRoute) {
-    util.openUri(this.getUrl(route));
+    openUri(this.getUrl(route));
   }
 
   /**

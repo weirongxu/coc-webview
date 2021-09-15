@@ -1,16 +1,37 @@
 import { Uri } from 'coc.nvim';
-import { v1 as uuidV1 } from 'uuid';
+import { URL, URLSearchParams } from 'url';
 import { readFile } from './util';
 
-export const resourceStores = new Map<string, string>();
+export class ResourceUri {
+  static parse(urlOrStr: string): ResourceUri | undefined;
+  static parse(urlOrStr: URL): ResourceUri;
+  static parse(urlOrStr: URL | string) {
+    let url: URL;
+    try {
+      url = typeof urlOrStr === 'string' ? new URL(urlOrStr) : urlOrStr;
+    } catch (_) {
+      return undefined;
+    }
+    return new ResourceUri(url);
+  }
 
-export async function readResourceFile(resourceId: string) {
-  const fsPath = resourceStores.get(resourceId);
-  if (fsPath) {
-    const content = await readFile(fsPath);
-    return content;
-  } else {
-    return '';
+  public readonly params: URLSearchParams;
+  public readonly isResource: boolean;
+  public readonly fsPath: string | undefined;
+
+  constructor(public readonly url: URL) {
+    this.params = new URLSearchParams(this.url.search);
+    this.isResource = this.url.pathname.startsWith('/resources');
+    this.fsPath = this.params.get('fsPath') ?? undefined;
+  }
+
+  async readFile() {
+    if (this.fsPath) {
+      const content = await readFile(this.fsPath);
+      return content;
+    } else {
+      return '';
+    }
   }
 }
 
@@ -26,17 +47,14 @@ export async function readResourceFile(resourceId: string) {
  *
  * @param resource Uri of the resource to load.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function asWebviewUri(resource: Uri, options: { host: string; port: number }): Uri {
   if (resource.scheme === 'http' || resource.scheme === 'http') {
     return resource;
   }
 
-  const resourceId = uuidV1();
-  resourceStores.set(resourceId, resource.fsPath);
   return Uri.from({
     scheme: 'http',
     authority: `${options.host}:${options.port}`,
-    path: `resources/${resourceId}`,
+    path: `resources?fsPath=${encodeURIComponent(resource.fsPath)}`,
   });
 }

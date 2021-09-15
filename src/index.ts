@@ -1,14 +1,18 @@
 import { Disposable, ExtensionContext, listManager } from 'coc.nvim';
 import { WebviewList } from './list';
 import { webviewManager } from './manager';
+import { ResourceUri } from './resource';
 import { cocWebviewServer } from './server';
-import { config, logger, util } from './util';
+import { config, logger, openUri } from './util';
 import { createWebviewPanel } from './webview';
 export * from './api.types';
 
 const webviewAPI = {
   createWebviewPanel,
-  util,
+  util: {
+    openUri,
+    ResourceUri,
+  },
 };
 
 export type WebviewAPI = typeof webviewAPI;

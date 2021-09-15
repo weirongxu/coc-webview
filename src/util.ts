@@ -2,14 +2,14 @@ import { spawn, SpawnOptionsWithoutStdio } from 'child_process';
 import { HelperLogger } from 'coc-helper';
 import { Uri, workspace } from 'coc.nvim';
 import fs from 'fs';
-import utilLib from 'util';
 import open from 'open';
+import util from 'util';
 
 export const config = workspace.getConfiguration('webview');
 
 export const logger = new HelperLogger('webview');
 
-export const readFile = utilLib.promisify(fs.readFile);
+export const readFile = util.promisify(fs.readFile);
 
 export const isURL = (uri: string) => {
   try {
@@ -47,7 +47,7 @@ function openInBrowser(url: string): void {
   }
 }
 
-function openUri(fsPathOrURL: string): void {
+export function openUri(fsPathOrURL: string): void {
   if (fsPathOrURL.startsWith('file://')) {
     const u = Uri.parse(fsPathOrURL).fsPath;
     if (u !== fsPathOrURL) {
@@ -60,7 +60,3 @@ function openUri(fsPathOrURL: string): void {
     open(fsPathOrURL).catch(logger.error);
   }
 }
-
-export const util = {
-  openUri,
-};
