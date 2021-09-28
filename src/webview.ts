@@ -38,14 +38,6 @@ class CocWebview implements Webview {
   }
 
   asWebviewUri(localResource: Uri): Uri {
-    if (
-      !this.options.localResourceRoots ||
-      !this.options.localResourceRoots.some((root) => localResource.toString().startsWith(root.toString()))
-    ) {
-      throw new Error(
-        'asWebviewUri: The resource cannot be created because the localResource is not inside the localResourceRoots',
-      );
-    }
     return asWebviewUri(localResource, { host: this.host, port: this.port });
   }
 }

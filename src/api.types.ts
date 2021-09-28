@@ -5,8 +5,6 @@
 
 import { Event, Thenable, Uri } from 'coc.nvim';
 
-// FIXME: update the doc
-
 /**
  * Content settings for a webview.
  */
@@ -26,15 +24,6 @@ export interface WebviewOptions {
   //  * Defaults to false.
   //  */
   // readonly enableCommandUris?: boolean;
-
-  /**
-   * Root paths from which the webview can load local (filesystem) resources using uris from `asWebviewUri`
-   *
-   * Default to the root folders of the current workspace plus the extension's install directory.
-   *
-   * Pass in an empty array to disallow access to any local resources.
-   */
-  readonly localResourceRoots?: readonly Uri[];
 
   // /**
   //  * Mappings of localhost ports used inside the webview.
@@ -201,8 +190,6 @@ export interface WebviewPanel {
   readonly onDidDispose: Event<void>;
 
   /**
-   * TODO
-   *
    * Highlight this webview and open to browser
    */
   reveal(options: { openURL: boolean }): void;
