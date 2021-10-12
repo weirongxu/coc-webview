@@ -81,10 +81,15 @@ class CocWebviewServer implements Disposable {
   public async tryCreate(): Promise<{ host: string; port: number }> {
     if (!this.instance) {
       this.instance = http.createServer(async (req, res) => {
-        const rendered = await this.bindRoutes(req, res);
-        if (!rendered) {
-          res.writeHead(404);
-          res.end('COC WEBVIEW NOT FOUND');
+        try {
+          const rendered = await this.bindRoutes(req, res);
+          if (!rendered) {
+            res.writeHead(404);
+            res.end('COC WEBVIEW NOT FOUND');
+          }
+        } catch (e) {
+          res.writeHead(400);
+          res.end(`COC WEBVIEW ERROR ${(e as Error).message}`);
         }
       });
     }

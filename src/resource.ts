@@ -2,6 +2,8 @@ import { Uri } from 'coc.nvim';
 import { URL, URLSearchParams } from 'url';
 import { readFile } from './util';
 
+const fsPathSet = new Set<string>();
+
 export class ResourceUri {
   static parse(urlOrStr: string): ResourceUri | undefined;
   static parse(urlOrStr: URL): ResourceUri;
@@ -23,6 +25,11 @@ export class ResourceUri {
     this.params = new URLSearchParams(this.url.search);
     this.isResource = this.url.pathname.startsWith('/resources');
     this.fsPath = this.params.get('fsPath') ?? undefined;
+    if (this.isResource && this.fsPath) {
+      if (!fsPathSet.has(this.fsPath)) {
+        throw new Error(`Resource URL(${url}) not found`);
+      }
+    }
   }
 
   async readFile() {
@@ -52,9 +59,12 @@ export function asWebviewUri(resource: Uri, options: { host: string; port: numbe
     return resource;
   }
 
-  return Uri.from({
+  const fsPath = resource.fsPath;
+  fsPathSet.add(fsPath);
+  const uri = Uri.from({
     scheme: 'http',
     authority: `${options.host}:${options.port}`,
-    path: `resources?fsPath=${encodeURIComponent(resource.fsPath)}`,
+    path: `resources?fsPath=${encodeURIComponent(fsPath)}`,
   });
+  return uri;
 }
