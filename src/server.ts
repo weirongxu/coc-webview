@@ -9,6 +9,8 @@ import { ResourceUri } from './resource';
 import {
   Arguments,
   ColorStrategy,
+  IconPaths,
+  LightOrDarkMode,
   ServerConnectorEvents,
   SocketClientEvents,
   SocketServerEvents,
@@ -262,23 +264,19 @@ class CocWebviewServer implements Disposable {
       dark: string;
       light: string;
     }>('primaryColors')!;
-    const startupOptions: StartupOptions = {
-      debug: this.debug,
-      primaryColors,
-      url,
-      routeName: route.routeName,
-      state,
-    };
 
     // color
     const colorStrategy = config.get<ColorStrategy>('colorStrategy')!;
     let colorCss = '';
+    let lightOrDarkMode: LightOrDarkMode = 'system';
     if (colorStrategy === 'vim-background') {
       const backgroundOption = await workspace.nvim.getOption('background');
       if (backgroundOption === 'dark') {
         colorCss = `:root { --primary-color: ${primaryColors.dark}; }`;
+        lightOrDarkMode = 'dark';
       } else if (backgroundOption === 'light') {
         colorCss = `:root { --primary-color: ${primaryColors.light}; }`;
+        lightOrDarkMode = 'light';
       }
     } else if (colorStrategy === 'system') {
       colorCss = `
@@ -289,11 +287,23 @@ class CocWebviewServer implements Disposable {
           :root { --primary-color: ${primaryColors.dark}; }
         }
       `;
+      lightOrDarkMode = 'system';
     } else if (colorStrategy === 'dark') {
       colorCss = `:root { --primary-color: ${primaryColors.dark}; }`;
+      lightOrDarkMode = 'dark';
     } else if (colorStrategy === 'light') {
       colorCss = `:root { --primary-color: ${primaryColors.light}; }`;
+      lightOrDarkMode = 'light';
     }
+
+    const startupOptions: StartupOptions = {
+      debug: this.debug,
+      primaryColors,
+      url,
+      routeName: route.routeName,
+      state,
+      lightOrDarkMode,
+    };
 
     return `
       <!DOCTYPE html>
@@ -309,7 +319,10 @@ class CocWebviewServer implements Disposable {
       </head>
       <body>
         <div id="title">
-          <h1>${route.title}</h1>
+          <h1>
+            <img id="title-img"></img>
+            <span id="title-content">${route.title}</span>
+          </h1>
           <a class="close">×</a>
         </div>
         <div id="reveal-cover" style="display: none;"></div>
@@ -410,6 +423,13 @@ export class ServerConnector {
         });
       });
     }
+  }
+
+  async setIconPath(uris: IconPaths) {
+    await this.waitSocket((socket) => {
+      logger.debug(`[${this.routeName}][socket ${socket.id}] server setIconPath`);
+      socket.emit('iconPath', uris);
+    });
   }
 
   async setTitle(content: string) {

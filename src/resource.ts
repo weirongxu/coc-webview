@@ -64,7 +64,8 @@ export function asWebviewUri(resource: Uri, options: { host: string; port: numbe
   const uri = Uri.from({
     scheme: 'http',
     authority: `${options.host}:${options.port}`,
-    path: `resources?fsPath=${encodeURIComponent(fsPath)}`,
+    path: 'resources',
+    query: `fsPath=${encodeURIComponent(fsPath)}`,
   });
   return uri;
 }

@@ -14,6 +14,7 @@ export interface SocketServerEvents {
 
 export interface SocketClientEvents {
   title: (content: string) => void;
+  iconPath: (paths: IconPaths) => void;
   html: (content: string) => void;
   postMessage: (message: any) => void;
   reveal: () => void;
@@ -38,6 +39,13 @@ export type StartupOptions = {
   url: string;
   routeName: string;
   state: any;
+  lightOrDarkMode: LightOrDarkMode;
 };
 
-export type ColorStrategy = 'vim-background' | 'system' | 'dark' | 'light';
+export type IconPaths = { light: string; dark: string };
+
+export type ColorMode = 'dark' | 'light';
+
+export type LightOrDarkMode = ColorMode | 'system';
+
+export type ColorStrategy = 'vim-background' | 'system' | ColorMode;

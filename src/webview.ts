@@ -16,8 +16,8 @@ class CocWebview implements Webview {
 
   constructor(
     private readonly connector: ServerConnector,
-    private host: string,
-    private port: number,
+    public host: string,
+    public port: number,
     public options: WebviewOptions,
   ) {
     const onDidReceiveMessageEmitter = new Emitter();
@@ -43,11 +43,6 @@ class CocWebview implements Webview {
 }
 
 class CocWebviewPanel implements WebviewPanel {
-  /**
-   * Icon for the panel shown in UI.
-   */
-  public iconPath?: Uri | { light: Uri; dark: Uri };
-
   /**
    * {@link Webview `Webview`} belonging to the panel.
    */
@@ -160,8 +155,35 @@ class CocWebviewPanel implements WebviewPanel {
     await this.connector.reveal(options);
   }
 
+  /**
+   * Title for the panel
+   */
   set title(content: string) {
     this.connector.setTitle(content).catch(logger.error);
+  }
+
+  /**
+   * Icon for the panel shown in UI.
+   */
+  set iconPath(uri: Uri | { light: Uri; dark: Uri }) {
+    if (Uri.isUri(uri)) {
+      uri = {
+        light: uri,
+        dark: uri,
+      };
+    }
+    const uriOptions = {
+      host: this.webview.host,
+      port: this.webview.port,
+    };
+    const light = asWebviewUri(uri.light, uriOptions);
+    const dark = asWebviewUri(uri.dark, uriOptions);
+    this.connector
+      .setIconPath({
+        light: light.toString(true),
+        dark: dark.toString(true),
+      })
+      .catch(logger.error);
   }
 
   dispose() {

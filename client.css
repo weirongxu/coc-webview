@@ -29,6 +29,11 @@ body {
   align-items: center;
 }
 
+#title-img {
+  max-width: 20px;
+  margin-right: 4px;
+}
+
 #title h1 {
   flex: 1;
   font-size: 16px;

@@ -1,5 +1,5 @@
 import { Socket, io } from 'socket.io-client';
-import { SocketClientEvents, SocketServerEvents, StartupOptions } from '../types';
+import { ColorMode, IconPaths, SocketClientEvents, SocketServerEvents, StartupOptions } from '../types';
 
 // @ts-ignore
 window.startup = (options: StartupOptions) => {
@@ -55,9 +55,29 @@ window.startup = (options: StartupOptions) => {
   socket.on('title', (content) => {
     log('received title', content);
     title = content;
-    const titleDom = document.querySelector('#title h1');
+    const titleDom = document.querySelector('#title-content');
     if (titleDom) titleDom.textContent = content;
     document.title = content;
+  });
+
+  // update iconPath
+  const colorMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  let systemColorMode: ColorMode = colorMediaQuery.matches ? 'dark' : 'light';
+  colorMediaQuery.addEventListener('change', (e) => {
+    systemColorMode = e.matches ? 'dark' : 'light';
+    setIconPath(systemColorMode);
+  });
+  let iconPaths: IconPaths | undefined;
+  const setIconPath = (mode: ColorMode) => {
+    if (!iconPaths) return;
+
+    const titleIconDom: HTMLImageElement | null = document.querySelector('#title-img');
+    if (titleIconDom) titleIconDom.src = iconPaths[mode];
+  };
+  socket.on('iconPath', (paths) => {
+    log('received iconPath', paths);
+    iconPaths = paths;
+    setIconPath(options.lightOrDarkMode === 'system' ? systemColorMode : options.lightOrDarkMode);
   });
 
   // update html
