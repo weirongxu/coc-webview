@@ -86,7 +86,7 @@ Usage: https://github.com/neoclide/coc.nvim/wiki/Using-the-configuration-file
 
 - [x] dark mode
 - [x] webview reveal
-- [ ] display iconPath
+- [x] display iconPath
 - [ ] vim keybinding
 - [ ] cspSource
 
