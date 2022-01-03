@@ -281,7 +281,7 @@ class CocWebviewServer implements Disposable {
     let cssDynamicAfter = '';
 
     // title panel
-    const titlePanelEnabled = config.get<boolean>('titlePanelEnabled');
+    const titlePanelEnabled = config.get<boolean>('titlePanel.enabled');
     if (!titlePanelEnabled) {
       cssDynamicAfter += `#title { display: none }`;
     }
