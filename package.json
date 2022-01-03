@@ -108,11 +108,6 @@
             "light": "#2288ff"
           }
         },
-        "webview.host": {
-          "description": "Listen host for webview service",
-          "type": "string",
-          "default": "localhost"
-        },
         "webview.minPort": {
           "description": "Mix port for webview service",
           "type": "number",

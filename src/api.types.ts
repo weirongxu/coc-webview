@@ -18,6 +18,11 @@ export interface WebviewOptions {
    */
   readonly enableScripts?: boolean;
 
+  /**
+   * Set of root paths from which the webview can load local resources.
+   */
+  readonly localResourceRoots?: Uri[];
+
   // /**
   //  * Controls whether command uris are enabled in webview content or not.
   //  *

@@ -85,6 +85,7 @@ class CocWebviewPanel implements WebviewPanel {
     const { route, connector } = await cocWebviewServer.add({
       routeName,
       title,
+      localResourceRoots: options.localResourceRoots,
     });
     logger.info(`added routeName ${routeName}`);
     if (openOptions.openURL) {

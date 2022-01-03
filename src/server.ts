@@ -1,11 +1,12 @@
+import assert from 'assert';
 import { HelperEventEmitter } from 'coc-helper';
-import { Disposable, workspace } from 'coc.nvim';
+import { Disposable, Uri, workspace } from 'coc.nvim';
 import http from 'http';
 import mime from 'mime-types';
 import path from 'path';
 import { Server as SocketServer, Socket } from 'socket.io';
 import { URL } from 'url';
-import { ResourceUri } from './resource';
+import { ResourceUri, updateRoutes } from './resource';
 import {
   Arguments,
   ColorStrategy,
@@ -21,12 +22,15 @@ import { config, logger, openUri, readFile } from './util';
 export type ServerRouteParams = {
   title: string;
   routeName: string;
+  localResourceRoots?: Uri[];
 };
 
-export type ServerRoute = ServerRouteParams & {
+export type ServerBinded = {
   port: number;
   host: string;
 };
+
+export type ServerRoute = ServerRouteParams & ServerBinded;
 
 type ServerSocket = Socket<SocketServerEvents, SocketClientEvents>;
 
@@ -75,22 +79,20 @@ class CocWebviewServer implements Disposable {
   public readonly sockets = new SocketManager();
   public readonly states = new Map<string, unknown>();
   public readonly connectors = new Map<string, ServerConnector>();
-  public binded?: {
-    host: string;
-    port: number;
-  };
+  public binded?: ServerBinded;
 
-  public async tryCreate(): Promise<{ host: string; port: number }> {
+  public async tryCreate(): Promise<ServerBinded> {
     if (!this.instance) {
       this.instance = http.createServer(async (req, res) => {
         try {
-          const rendered = await this.bindRoutes(req, res);
+          assert(this.binded, 'CocWebviewServer binded is undefined');
+          const rendered = await this.bindRoutes(req, res, this.binded);
           if (!rendered) {
             res.writeHead(404);
             res.end('COC WEBVIEW NOT FOUND');
           }
         } catch (e) {
-          res.writeHead(400);
+          res.writeHead(500);
           res.end(`COC WEBVIEW ERROR ${(e as Error).message}`);
         }
       });
@@ -109,16 +111,21 @@ class CocWebviewServer implements Disposable {
     }
   }
 
-  private async bindRoutes(req: http.IncomingMessage, res: http.ServerResponse) {
+  private async bindRoutes(req: http.IncomingMessage, res: http.ServerResponse, binded: ServerBinded) {
     if (!req.url) {
       return false;
     }
     const url = new URL(req.url, `http://${req.headers.host}`);
     const pathname = url.pathname;
     logger.debug(`request pathname ${pathname}`);
-    const resourceUri = ResourceUri.parse(url);
+    const resourceUri = ResourceUri.parse(url, binded);
     if (resourceUri.isResource) {
-      const fsPath = resourceUri.fsPath;
+      if (resourceUri.forbidden) {
+        res.writeHead(403);
+        res.end('COC WEBVIEW FORBIDDEN');
+        return true;
+      }
+      const fsPath = resourceUri.localPath;
       if (!fsPath) {
         return false;
       }
@@ -126,9 +133,13 @@ class CocWebviewServer implements Disposable {
       if (!content) {
         return false;
       }
-      const filename = path.basename(resourceUri.fsPath);
+      const filename = path.basename(resourceUri.localPath);
       const mimeStr = mime.lookup(filename);
-      res.writeHead(200, { 'Content-Type': mimeStr || undefined });
+      res.writeHead(200, {
+        'Content-Type': mimeStr || undefined,
+        'Access-Control-Allow-Origin': `http://${binded.host}:${binded.port}`,
+        'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+      });
       res.end(content);
       return true;
     } else if (pathname.startsWith('/webview')) {
@@ -210,8 +221,8 @@ class CocWebviewServer implements Disposable {
     });
   }
 
-  private async tryStart(server: http.Server): Promise<{ host: string; port: number }> {
-    const host = config.get<string>('host')!;
+  private async tryStart(server: http.Server): Promise<ServerBinded> {
+    const host = 'localhost';
     const minPort = config.get<number>('minPort')!;
     const maxPort = config.get<number>('maxPort')!;
 
@@ -344,12 +355,13 @@ class CocWebviewServer implements Disposable {
 
   public async add(routeParams: ServerRouteParams) {
     const binded = await this.tryCreate();
-    const route = {
+    const route: ServerRoute = {
       ...routeParams,
       host: binded.host,
       port: binded.port,
     };
     this.routes.set(routeParams.routeName, route);
+    updateRoutes(this.routes);
     return {
       connector: this.createConnector(routeParams.routeName),
       route,
@@ -394,6 +406,7 @@ class CocWebviewServer implements Disposable {
     this.emitConnector(routeName, 'dispose');
     this.sockets.unregisterAll(routeName);
     this.routes.delete(routeName);
+    updateRoutes(this.routes);
   }
 }
 
