@@ -12,6 +12,7 @@ window.startup = (options: StartupOptions) => {
   }
 
   function log(...args: any[]) {
+    // eslint-disable-next-line no-console
     console.log(`[${routeName}][socket ${socket.id}]`, ...args);
   }
 
@@ -95,7 +96,7 @@ window.startup = (options: StartupOptions) => {
   // reveal
   const revealCover = document.getElementById('reveal-cover') as HTMLDivElement;
   revealCover.addEventListener('transitionend', () => {
-    console.log('transitionend');
+    log('transitionend');
     revealCover.style.background = '';
   });
   const titleFlasher = {

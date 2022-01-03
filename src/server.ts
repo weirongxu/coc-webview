@@ -83,19 +83,21 @@ class CocWebviewServer implements Disposable {
 
   public async tryCreate(): Promise<ServerBinded> {
     if (!this.instance) {
-      this.instance = http.createServer(async (req, res) => {
-        try {
-          assert(this.binded, 'CocWebviewServer binded is undefined');
-          const rendered = await this.bindRoutes(req, res, this.binded);
-          if (!rendered) {
-            res.writeHead(404);
-            res.end('COC WEBVIEW NOT FOUND');
+      this.instance = http.createServer(
+        logger.asyncCatch(async (req, res) => {
+          try {
+            assert(this.binded, 'CocWebviewServer binded is undefined');
+            const rendered = await this.bindRoutes(req, res, this.binded);
+            if (!rendered) {
+              res.writeHead(404);
+              res.end('COC WEBVIEW NOT FOUND');
+            }
+          } catch (e) {
+            res.writeHead(500);
+            res.end(`COC WEBVIEW ERROR ${(e as Error).message}`);
           }
-        } catch (e) {
-          res.writeHead(500);
-          res.end(`COC WEBVIEW ERROR ${(e as Error).message}`);
-        }
-      });
+        }),
+      );
     }
     if (!this.wsInstance) {
       this.wsInstance = new SocketServer(this.instance);
@@ -155,7 +157,7 @@ class CocWebviewServer implements Disposable {
       }
     } else if (pathname.startsWith('/static')) {
       const filename = pathname.split('/').pop();
-      if (filename && CocWebviewServer.staticRoutes.hasOwnProperty(filename)) {
+      if (filename && Object.prototype.hasOwnProperty.call(CocWebviewServer.staticRoutes, filename)) {
         const mimeStr = mime.lookup(filename);
         const path = CocWebviewServer.staticRoutes[filename];
         const content = await readFile(path);
@@ -214,7 +216,7 @@ class CocWebviewServer implements Disposable {
         this.states.set(routeName, state);
       });
 
-      socket.on('visible', (visible) => {
+      socket.on('visible', (visible: boolean) => {
         logDebug(`client visible(${visible})`);
         this.emitConnector(routeName, 'visible', visible);
       });
@@ -246,7 +248,6 @@ class CocWebviewServer implements Disposable {
           if ((e as { code: string }).code === 'EADDRINUSE') {
             logger.info(`Port ${port} is in use, trying another one...`);
             continue;
-          } else {
           }
         }
         throw e;
