@@ -277,21 +277,29 @@ class CocWebviewServer implements Disposable {
       light: string;
     }>('primaryColors')!;
 
+    let cssDynamicBefore = '';
+    let cssDynamicAfter = '';
+
+    // title panel
+    const titlePanelEnabled = config.get<boolean>('titlePanelEnabled');
+    if (!titlePanelEnabled) {
+      cssDynamicAfter += `#title { display: none }`;
+    }
+
     // color
     const colorStrategy = config.get<ColorStrategy>('colorStrategy')!;
-    let colorCss = '';
     let lightOrDarkMode: LightOrDarkMode = 'system';
     if (colorStrategy === 'vim-background') {
       const backgroundOption = await workspace.nvim.getOption('background');
       if (backgroundOption === 'dark') {
-        colorCss = `:root { --primary-color: ${primaryColors.dark}; }`;
+        cssDynamicBefore += `:root { --primary-color: ${primaryColors.dark}; }`;
         lightOrDarkMode = 'dark';
       } else if (backgroundOption === 'light') {
-        colorCss = `:root { --primary-color: ${primaryColors.light}; }`;
+        cssDynamicBefore += `:root { --primary-color: ${primaryColors.light}; }`;
         lightOrDarkMode = 'light';
       }
     } else if (colorStrategy === 'system') {
-      colorCss = `
+      cssDynamicBefore += `
         @media (prefers-color-scheme: light) {
           :root { --primary-color: ${primaryColors.light}; }
         }
@@ -301,10 +309,10 @@ class CocWebviewServer implements Disposable {
       `;
       lightOrDarkMode = 'system';
     } else if (colorStrategy === 'dark') {
-      colorCss = `:root { --primary-color: ${primaryColors.dark}; }`;
+      cssDynamicBefore += `:root { --primary-color: ${primaryColors.dark}; }`;
       lightOrDarkMode = 'dark';
     } else if (colorStrategy === 'light') {
-      colorCss = `:root { --primary-color: ${primaryColors.light}; }`;
+      cssDynamicBefore += `:root { --primary-color: ${primaryColors.light}; }`;
       lightOrDarkMode = 'light';
     }
 
@@ -325,9 +333,12 @@ class CocWebviewServer implements Disposable {
         <title>${route.title}</title>
         <style type="text/css">
           :root { --primary-color: #2288ff; }
-          ${colorCss}
+          ${cssDynamicBefore}
         </style>
         <link rel="stylesheet" type="text/css" href="${url}/static/client.css" />
+        <style type="text/css">
+          ${cssDynamicAfter}
+        </style>
       </head>
       <body>
         <div id="title">

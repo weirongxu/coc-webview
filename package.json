@@ -68,6 +68,11 @@
           "type": "boolean",
           "default": false
         },
+        "webview.titlePanel.enabled": {
+          "description": "Enable title panel",
+          "type": "boolean",
+          "default": true
+        },
         "webview.colorStrategy": {
           "description": "Color strategy for webview",
           "enum": [
