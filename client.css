@@ -63,3 +63,10 @@ body {
   height: 100%;
   z-index: 10;
 }
+
+@media print {
+  #title,
+  #reveal-cover {
+    display: none !important;
+  }
+}
