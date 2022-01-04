@@ -342,6 +342,10 @@ class CocWebviewServer implements Disposable {
       </head>
       <body>
         <div id="title">
+          <div class="menu">
+            <span class="button">☰</span>
+            <ul class="menu-list"></ul>
+          </div>
           <h1>
             <img id="title-img"></img>
             <span id="title-content">${route.title}</span>

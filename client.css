@@ -41,13 +41,57 @@ body {
 }
 
 #title .close {
-  padding: 0 20px;
+  padding: 0 14px;
   cursor: pointer;
 }
 
 #title .close:hover {
   background-color: white;
   color: var(--primary-color);
+}
+
+#title .menu {
+  position: relative;
+}
+
+#title .menu .button {
+  display: block;
+  padding: 10px 14px;
+}
+
+#title .menu .button:hover {
+  background-color: white;
+  color: var(--primary-color);
+}
+
+#title .menu-list {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 100%;
+  background: var(--primary-color);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#title .menu-list li {
+  display: block;
+}
+
+#title .menu-list li a {
+  display: block;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+#title .menu-list li a:hover {
+  background-color: white;
+  color: var(--primary-color);
+}
+
+#title .menu:hover .menu-list {
+  display: block;
 }
 
 #main {

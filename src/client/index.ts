@@ -169,10 +169,28 @@ window.startup = (options: StartupOptions) => {
     socket.emit('visible', visible);
   });
 
+  // close webview
   document.querySelector('#title .close')?.addEventListener('click', () => {
     socket.emit('dispose');
     close();
   });
+
+  // menu for title panel
+  const menuList = document.querySelector('#title .menu-list') as HTMLUListElement;
+  if (menuList) {
+    menuList.innerHTML = `
+      <li><a data-action="print">Print</a></li>
+    `;
+    menuList.addEventListener('click', (event) => {
+      const link = event.target as HTMLAnchorElement;
+      const action = link.dataset.action;
+      switch (action) {
+        case 'print':
+          win.print();
+          break;
+      }
+    });
+  }
 
   // TODO vim keybinding
 };
