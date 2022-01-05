@@ -1,3 +1,4 @@
+import { isWindows } from 'coc-helper';
 import { Uri } from 'coc.nvim';
 import path from 'path';
 import { URL } from 'url';
@@ -38,7 +39,11 @@ export class ResourceUri {
     if (routeName !== resourceRouteName) {
       return [false, undefined];
     }
-    return [true, `/${remainPath.join('/')}`];
+    let localPath = remainPath.join('/');
+    if (!isWindows) {
+      localPath = `/${localPath}`;
+    }
+    return [true, path.resolve(localPath)];
   }
 
   private getForbidden() {
@@ -46,7 +51,6 @@ export class ResourceUri {
       return true;
     }
     if (fsPathSet.has(this.localPath)) {
-      logger.info('fsPath');
       return false;
     }
     for (const root of resourceRootSet) {
