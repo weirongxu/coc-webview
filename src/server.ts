@@ -34,6 +34,10 @@ export type ServerRoute = ServerRouteParams & ServerBinded;
 
 type ServerSocket = Socket<SocketServerEvents, SocketClientEvents>;
 
+export function baseHost(binded: ServerBinded) {
+  return `${binded.host}:${binded.port}`;
+}
+
 class SocketManager {
   public readonly sockets = new Map<string, Map<string, ServerSocket>>();
 
@@ -139,7 +143,7 @@ class CocWebviewServer implements Disposable {
       const mimeStr = mime.lookup(filename);
       res.writeHead(200, {
         'Content-Type': mimeStr || undefined,
-        'Access-Control-Allow-Origin': `http://${binded.host}:${binded.port}`,
+        'Access-Control-Allow-Origin': `http://${baseHost(binded)}`,
         'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
       });
       res.end(content);
@@ -366,7 +370,7 @@ class CocWebviewServer implements Disposable {
   }
 
   getUrl(route: ServerRoute) {
-    return `http://${route.host}:${route.port}/webview/${route.routeName}`;
+    return `http://${baseHost(route)}/webview/${route.routeName}`;
   }
 
   public async add(routeParams: ServerRouteParams) {

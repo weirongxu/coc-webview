@@ -1,20 +1,12 @@
-import { isWindows } from 'coc-helper';
 import { Uri } from 'coc.nvim';
 import path from 'path';
 import { URL } from 'url';
-import { ServerBinded, ServerRoute } from './server';
+import { baseHost, ServerBinded, ServerRoute } from './server';
 import { logger, readFile } from './util';
 
 const fsPathSet = new Set<string>();
 const resourceRootSet = new Set<string>();
-
-export function resourceHost(binded: ServerBinded) {
-  return `file-resource.${binded.host}`;
-}
-
-function resourceAuthority(binded: ServerBinded) {
-  return `${resourceHost(binded)}:${binded.port}`;
-}
+const resourceRouteName = 'resources';
 
 export class ResourceUri {
   static parse(urlOrStr: string, binded: ServerBinded): ResourceUri | undefined;
@@ -34,17 +26,19 @@ export class ResourceUri {
   public readonly localPath: string | undefined;
 
   constructor(public readonly url: URL, readonly binded: ServerBinded) {
-    this.isResource = this.url.hostname === resourceHost(binded);
-    this.localPath = this.getLocalPath();
+    [this.isResource, this.localPath] = this.parseLocalPath(binded);
     this.forbidden = this.getForbidden();
   }
 
-  private getLocalPath() {
-    let p = this.url.pathname;
-    if (isWindows && p.startsWith('/')) {
-      p = p.slice(1);
+  private parseLocalPath(binded: ServerBinded): [isResource: boolean, localPath: string | undefined] {
+    if (this.url.hostname !== binded.host) {
+      return [false, undefined];
     }
-    return path.resolve(p);
+    const [, routeName, ...remainPath] = this.url.pathname.split('/');
+    if (routeName !== resourceRouteName) {
+      return [false, undefined];
+    }
+    return [true, `/${remainPath.join('/')}`];
   }
 
   private getForbidden() {
@@ -85,12 +79,12 @@ export function asWebviewUri(resource: Uri, binded: ServerBinded): Uri {
     return resource;
   }
 
-  const path = resource.fsPath;
-  fsPathSet.add(path);
+  const fsPath = resource.fsPath;
+  fsPathSet.add(fsPath);
   const uri = Uri.from({
     scheme: 'http',
-    authority: resourceAuthority(binded),
-    path,
+    authority: baseHost(binded),
+    path: path.join(resourceRouteName, fsPath),
   });
 
   return uri;
