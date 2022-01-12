@@ -248,11 +248,10 @@ class CocWebviewServer implements Disposable {
         await listenServer(port);
         break;
       } catch (e) {
-        if (e instanceof Error && 'code' in e) {
-          if ((e as { code: string }).code === 'EADDRINUSE') {
-            logger.info(`Port ${port} is in use, trying another one...`);
-            continue;
-          }
+        const err = e as { code: string };
+        if ('code' in err && err.code === 'EADDRINUSE') {
+          logger.info(`Port ${port} is in use, trying another one...`);
+          continue;
         }
         throw e;
       }

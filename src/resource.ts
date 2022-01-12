@@ -3,7 +3,7 @@ import { Uri } from 'coc.nvim';
 import path from 'path';
 import { URL } from 'url';
 import { baseHost, ServerBinded, ServerRoute } from './server';
-import { logger, readFile } from './util';
+import { readFile } from './util';
 
 const fsPathSet = new Set<string>();
 const resourceRootSet = new Set<string>();
