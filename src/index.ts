@@ -18,7 +18,7 @@ const webviewAPI = {
 export type WebviewAPI = typeof webviewAPI;
 
 export function activate(context: ExtensionContext): WebviewAPI {
-  const debug = config.get<boolean>('debug')!;
+  const debug = config().get<boolean>('debug')!;
   logger.level = debug ? 'debug' : 'info';
   cocWebviewServer.debug = debug;
 

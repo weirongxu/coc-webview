@@ -6,7 +6,7 @@ import open from 'open';
 import { URL } from 'url';
 import util from 'util';
 
-export const config = workspace.getConfiguration('webview');
+export const config = () => workspace.getConfiguration('webview');
 
 export const logger = new HelperLogger('webview');
 
@@ -37,7 +37,7 @@ export const spawnCmdLine = (command: string, args: string[], options?: SpawnOpt
 };
 
 function openInBrowser(url: string): void {
-  const openCommand = config.get<string>('openCommand');
+  const openCommand = config().get<string>('openCommand');
   if (openCommand === 'nodejs:module') {
     open(url).catch(logger.error);
   } else if (openCommand) {

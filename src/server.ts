@@ -1,6 +1,6 @@
 import assert from 'assert';
 import { HelperEventEmitter } from 'coc-helper';
-import { Disposable, Uri, workspace } from 'coc.nvim';
+import { Disposable, Uri, window, workspace } from 'coc.nvim';
 import http from 'http';
 import mime from 'mime-types';
 import path from 'path';
@@ -229,8 +229,9 @@ class CocWebviewServer implements Disposable {
 
   private async tryStart(server: http.Server): Promise<ServerBinded> {
     const host = 'localhost';
-    const minPort = config.get<number>('minPort')!;
-    const maxPort = config.get<number>('maxPort')!;
+    const _config = config();
+    const minPort = _config.get<number>('minPort')!;
+    const maxPort = _config.get<number>('maxPort')!;
 
     const listenServer = (port: number) => {
       return new Promise((resolve, reject) => {
@@ -274,8 +275,9 @@ class CocWebviewServer implements Disposable {
   }
 
   private async genHtml(route: ServerRoute, url: string): Promise<string> {
+    const _config = config();
     const state = this.states.get(route.routeName);
-    const primaryColors = config.get<{
+    const primaryColors = _config.get<{
       dark: string;
       light: string;
     }>('primaryColors')!;
@@ -284,13 +286,13 @@ class CocWebviewServer implements Disposable {
     let cssDynamicAfter = '';
 
     // title panel
-    const titlePanelEnabled = config.get<boolean>('titlePanel.enabled');
+    const titlePanelEnabled = _config.get<boolean>('titlePanel.enabled');
     if (!titlePanelEnabled) {
       cssDynamicAfter += `#title { display: none }`;
     }
 
     // color
-    const colorStrategy = config.get<ColorStrategy>('colorStrategy')!;
+    const colorStrategy = _config.get<ColorStrategy>('colorStrategy')!;
     let lightOrDarkMode: LightOrDarkMode = 'system';
     if (colorStrategy === 'vim-background') {
       const backgroundOption = await workspace.nvim.getOption('background');
@@ -407,7 +409,9 @@ class CocWebviewServer implements Disposable {
    * Open route in browser or CLI
    */
   public openRoute(route: ServerRoute) {
-    openUri(this.getUrl(route));
+    const url = this.getUrl(route);
+    window.showMessage(`Opening ${url}`);
+    openUri(url);
   }
 
   /**
