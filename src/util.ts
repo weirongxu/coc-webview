@@ -3,6 +3,7 @@ import { HelperLogger } from 'coc-helper';
 import { Uri, workspace } from 'coc.nvim';
 import fs from 'fs';
 import open from 'open';
+import { URL } from 'url';
 import util from 'util';
 
 export const config = workspace.getConfiguration('webview');
