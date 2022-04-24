@@ -39,7 +39,7 @@ export class ResourceUri {
     if (routeName !== resourceRouteName) {
       return [false, undefined];
     }
-    let localPath = remainPath.join('/');
+    let localPath = decodeURI(remainPath.join('/'));
     if (!isWindows) {
       localPath = `/${localPath}`;
     }
