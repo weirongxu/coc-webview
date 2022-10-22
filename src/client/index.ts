@@ -1,8 +1,8 @@
 import { Socket, io } from 'socket.io-client';
-import { ColorMode, IconPaths, SocketClientEvents, SocketServerEvents, StartupOptions } from '../types';
+import { ColorMode, IconPaths, ReadyContext, SocketClientEvents, SocketServerEvents, StartupOptions } from '../types';
 
 // @ts-ignore
-window.startup = (options: StartupOptions) => {
+window.startup = async (options: StartupOptions) => {
   const { routeName } = options;
   const iframe = document.getElementById('main') as HTMLIFrameElement;
 
@@ -19,6 +19,7 @@ window.startup = (options: StartupOptions) => {
   const socket: Socket<SocketClientEvents, SocketServerEvents> = io(options.url, { autoConnect: true });
 
   let storedState = options.state;
+  let context: ReadyContext | undefined;
 
   // acquireVsCodeApi
   // @ts-ignore
@@ -43,6 +44,12 @@ window.startup = (options: StartupOptions) => {
   socket.on('connect', () => {
     log(`register`);
     socket.emit('register', routeName);
+  });
+
+  // ready context
+  socket.on('ready', (ctx) => {
+    log('ready');
+    context = ctx;
   });
 
   // postMessage
@@ -156,6 +163,25 @@ window.startup = (options: StartupOptions) => {
   socket.on('dispose', () => {
     titleFlasher.stop();
     close();
+  });
+
+  // file.path
+  // @ts-ignore
+  Object.defineProperty(win.File.prototype, 'path', {
+    enumerable: false,
+    get() {
+      if (!context) {
+        return;
+      }
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
+      const file: File = this;
+      const arr = new Uint8Array(8);
+      const randomInt8Arr = crypto.getRandomValues(arr);
+      const randomId = Array.from(randomInt8Arr, (i8) => i8.toString(16)).join('');
+      const fullpath = `${context.tmpdir}${randomId}/${file.name}`;
+      socket.emit('tmpFile', fullpath, new Blob([file]) as unknown as Buffer);
+      return fullpath;
+    },
   });
 
   win.focus();

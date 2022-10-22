@@ -1,9 +1,9 @@
 import { isWindows } from 'coc-helper';
 import { Uri } from 'coc.nvim';
+import fs from 'fs';
 import path from 'path';
 import { URL } from 'url';
 import { baseHost, ServerBinded, ServerRoute } from './server';
-import { readFile } from './util';
 
 const fsPathSet = new Set<string>();
 const resourceRootSet = new Set<string>();
@@ -65,7 +65,7 @@ export class ResourceUri {
     if (this.forbidden || !this.localPath) {
       throw new Error('forbidden');
     }
-    const content = await readFile(this.localPath);
+    const content = await fs.promises.readFile(this.localPath);
     return content;
   }
 }

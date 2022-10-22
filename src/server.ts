@@ -1,8 +1,10 @@
 import assert from 'assert';
 import { HelperEventEmitter } from 'coc-helper';
 import { Disposable, Uri, window, workspace } from 'coc.nvim';
+import fs from 'fs';
 import http from 'http';
 import mime from 'mime-types';
+import { tmpdir } from 'os';
 import path from 'path';
 import { Server as SocketServer, Socket } from 'socket.io';
 import { URL } from 'url';
@@ -17,7 +19,7 @@ import {
   SocketServerEvents,
   StartupOptions,
 } from './types';
-import { config, logger, openUri, readFile } from './util';
+import { config, logger, openUri } from './util';
 
 export type ServerRouteParams = {
   title: string;
@@ -164,7 +166,7 @@ class CocWebviewServer implements Disposable {
       if (filename && Object.prototype.hasOwnProperty.call(CocWebviewServer.staticRoutes, filename)) {
         const mimeStr = mime.lookup(filename);
         const path = CocWebviewServer.staticRoutes[filename];
-        const content = await readFile(path);
+        const content = await fs.promises.readFile(path);
         res.writeHead(200, { 'Content-Type': mimeStr || undefined });
         res.end(content);
         return true;
@@ -173,7 +175,7 @@ class CocWebviewServer implements Disposable {
     return false;
   }
 
-  private bindWs(socket: Socket) {
+  private bindWs(socket: ServerSocket) {
     socket.on('register', (routeName: string) => {
       const msgPrefix = `[${routeName}][socket ${socket.id}] `;
       const logDebug = (content: string) => {
@@ -223,6 +225,22 @@ class CocWebviewServer implements Disposable {
       socket.on('visible', (visible: boolean) => {
         logDebug(`client visible(${visible})`);
         this.emitConnector(routeName, 'visible', visible);
+      });
+
+      const d = tmpdir();
+      socket.emit('ready', {
+        tmpdir: d,
+      });
+
+      socket.on('tmpFile', (fullpath: string, buffer: Buffer) => {
+        fs.promises
+          .mkdir(path.dirname(fullpath), {
+            recursive: true,
+          })
+          .then(() => {
+            return fs.promises.writeFile(fullpath, buffer);
+          })
+          .catch(logger.error);
       });
     });
   }

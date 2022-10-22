@@ -4,15 +4,21 @@ export type Arguments<F extends (arg: any) => any> = F extends (...args: infer A
 
 export type EmitterArg<E> = E extends Emitter<infer A> ? A : never;
 
+export type ReadyContext = {
+  tmpdir: string;
+};
+
 export interface SocketServerEvents {
   register: (pathname: string) => void;
   dispose: () => void;
   postMessage: (message: any) => void;
   setState: (state: any) => void;
   visible: (visible: boolean) => void;
+  tmpFile: (filename: string, blob: Buffer) => void;
 }
 
 export interface SocketClientEvents {
+  ready: (context: ReadyContext) => void;
   title: (content: string) => void;
   iconPath: (paths: IconPaths) => void;
   html: (content: string) => void;

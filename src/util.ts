@@ -1,16 +1,12 @@
 import { spawn, SpawnOptionsWithoutStdio } from 'child_process';
 import { HelperLogger } from 'coc-helper';
 import { Uri, workspace } from 'coc.nvim';
-import fs from 'fs';
 import open from 'open';
 import { URL } from 'url';
-import util from 'util';
 
 export const config = () => workspace.getConfiguration('webview');
 
 export const logger = new HelperLogger('webview');
-
-export const readFile = util.promisify(fs.readFile);
 
 export const isURL = (uri: string) => {
   try {
