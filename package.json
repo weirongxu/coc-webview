@@ -1,6 +1,6 @@
 {
   "name": "coc-webview",
-  "version": "0.11.2",
+  "version": "0.12.0",
   "description": "Vscode webview ported to coc.nvim",
   "author": "Weirong Xu <weirongxu.raidou@gmail.com>",
   "license": "MIT",
