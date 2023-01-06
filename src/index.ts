@@ -7,11 +7,27 @@ import { config, logger, openUri } from './util';
 import { createWebviewPanel } from './webview';
 export * from './api.types';
 
+/**
+ * @example
+ * ```
+ * const resourceUri = parseResourceUri(hrefFromWebview)
+ * const escapedPath: string = await workspace.nvim.call('fnameescape', [
+ *   resourceUri.localPath,
+ * ]);
+ * nvim.command(`vsplit ${escapedPath}`);
+ * ```
+ */
+function parseResourceUri(url: string): ResourceUri | undefined {
+  if (!cocWebviewServer.binded) return;
+  return ResourceUri.parse(url, cocWebviewServer.binded);
+}
+
 const webviewAPI = {
   createWebviewPanel,
   util: {
     openUri,
     ResourceUri,
+    parseResourceUri,
   },
 };
 
