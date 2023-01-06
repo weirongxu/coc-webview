@@ -44,11 +44,11 @@ function openInBrowser(url: string): void {
   }
 }
 
-export function openUri(fsPathOrURL: string): void {
+export function openExternalUri(fsPathOrURL: string): void {
   if (fsPathOrURL.startsWith('file://')) {
     const u = Uri.parse(fsPathOrURL).fsPath;
     if (u !== fsPathOrURL) {
-      return openUri(Uri.parse(fsPathOrURL).fsPath);
+      return openExternalUri(Uri.parse(fsPathOrURL).fsPath);
     }
   }
   if (isURL(fsPathOrURL)) {

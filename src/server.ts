@@ -19,7 +19,7 @@ import {
   SocketServerEvents,
   StartupOptions,
 } from './types';
-import { config, logger, openUri } from './util';
+import { config, logger, openExternalUri } from './util';
 
 export type ServerRouteParams = {
   title: string;
@@ -429,7 +429,7 @@ class CocWebviewServer implements Disposable {
   public openRoute(route: ServerRoute) {
     const url = this.getUrl(route);
     window.showMessage(`Opening ${url}`);
-    openUri(url);
+    openExternalUri(url);
   }
 
   /**

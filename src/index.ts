@@ -3,7 +3,7 @@ import { WebviewList } from './list';
 import { webviewManager } from './manager';
 import { ResourceUri } from './resource';
 import { cocWebviewServer } from './server';
-import { config, logger, openUri } from './util';
+import { config, logger, openExternalUri } from './util';
 import { createWebviewPanel } from './webview';
 export * from './api.types';
 
@@ -25,7 +25,11 @@ function parseResourceUri(url: string): ResourceUri | undefined {
 const webviewAPI = {
   createWebviewPanel,
   util: {
-    openUri,
+    /**
+     * @deprecated
+     */
+    openUri: openExternalUri,
+    openExternalUri,
     ResourceUri,
     parseResourceUri,
   },
